@@ -8,6 +8,7 @@ import { DraggableComponent } from '@/components/DraggableComponent';
 import { Preview } from '@/components/Preview';
 import { nanoid } from 'nanoid';
 import { Plus, Save, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface Component {
   id: string;
@@ -50,16 +51,88 @@ export default function BuilderPage() {
     setComponents([...components, newComponent]);
   }
 
+  function handleSave() {
+    try {
+      localStorage.setItem('readme-components', JSON.stringify(components));
+      toast.success('Progress saved successfully');
+    } catch (error) {
+      toast.error('Failed to save progress');
+    }
+  }
+
+  function handleDownload() {
+    try {
+      const markdown = components
+        .map((component) => {
+          switch (component.type) {
+            case 'CodeBlock':
+              return `\`\`\`${component.config?.language || ''}\n${component.content}\n\`\`\``;
+            case 'InlineCode':
+              return `\`${component.content}\``;
+            case 'Blockquote':
+              return `> ${component.content}`;
+            case 'TaskList':
+              return `- [${component.config?.checked ? 'x' : ' '}] ${component.content}`;
+            case 'Link':
+              return `[${component.content}](${component.config?.url || '#'})`;
+            case 'Divider':
+              return '---';
+            case 'Badge':
+              return `![${component.config?.label || ''}](${component.content})`;
+            case 'Collapsible':
+              return `<details>\n<summary>${component.config?.summary || 'Details'}</summary>\n\n${component.content}\n</details>`;
+            case 'Headings':
+              return `${'#'.repeat(parseInt(component.config?.level || '1'))} ${component.content}`;
+            case 'Text':
+              return component.content;
+            case 'Images':
+              return `![${component.content}](${component.content})`;
+            case 'Lists':
+              return `- ${component.content}`;
+            case 'Tables':
+              return `| Column 1 | Column 2 |\n|----------|----------|\n| ${component.content} | Content |`;
+            default:
+              return component.content;
+          }
+        })
+        .join('\n\n');
+
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'README.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('README.md downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download README');
+    }
+  }
+
+  function handleDelete(id: string) {
+    setComponents(components.filter(component => component.id !== id));
+    toast.success('Component deleted');
+  }
+
   return (
     <div className="h-full flex flex-col">
       <header className="border-b border-[#222] p-4">
         <div className="flex items-center justify-between max-w-[1600px] mx-auto">
           <h1 className="text-xl font-bold">README Builder</h1>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg bg-component-bg hover:bg-[#252525] transition-colors">
+            <button 
+              onClick={handleSave}
+              className="px-4 py-2 rounded-lg bg-component-bg hover:bg-[#252525] transition-colors"
+            >
               <Save className="w-4 h-4" />
             </button>
-            <button className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors">
+            <button 
+              onClick={handleDownload}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
+            >
               <Download className="w-4 h-4" />
             </button>
           </div>
@@ -105,6 +178,7 @@ export default function BuilderPage() {
                       <DraggableComponent 
                         key={component.id} 
                         component={component}
+                        onDelete={handleDelete}
                       />
                     ))
                   )}
@@ -123,3 +197,4 @@ export default function BuilderPage() {
     </div>
   );
 }
+

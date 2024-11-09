@@ -15,6 +15,22 @@ export function Preview({ components }: Props) {
   const markdown = components
     .map((component) => {
       switch (component.type) {
+        case 'CodeBlock':
+          return `\`\`\`${component.config?.language || ''}\n${component.content}\n\`\`\``;
+        case 'InlineCode':
+          return `\`${component.content}\``;
+        case 'Blockquote':
+          return `> ${component.content}`;
+        case 'TaskList':
+          return `- [${component.config?.checked ? 'x' : ' '}] ${component.content}`;
+        case 'Link':
+          return `[${component.content}](${component.config?.url || '#'})`;
+        case 'Divider':
+          return '---';
+        case 'Badge':
+          return `![${component.config?.label || ''}](${component.content})`;
+        case 'Collapsible':
+          return `<details>\n<summary>${component.config?.summary || 'Details'}</summary>\n\n${component.content}\n</details>`;
         case 'Headings':
           return `# ${component.content}`;
         case 'Text':

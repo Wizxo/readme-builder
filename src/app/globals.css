@@ -28,8 +28,104 @@ body {
   border-right: 1px solid #222222;
 }
 
+.sidebar::-webkit-scrollbar {
+  width: 2px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: #333;
+}
+
+.category-section {
+  position: relative;
+}
+
+.category-section::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background-color: #222;
+}
+
+.category-section:last-child::after {
+  display: none;
+}
+
 .component-card {
-  background-color: var(--component-bg);
-  border: 1px solid #333333;
-  border-radius: 8px;
+  position: relative;
+}
+
+.icon-wrapper {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background-color: #1f1f1f;
+  transition: all 0.2s ease;
+}
+
+.component-card:hover .icon-wrapper {
+  background-color: #252525;
+}
+
+.drag-indicator {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.component-card:hover .drag-indicator {
+  opacity: 0.5;
+}
+
+.drag-indicator .dot {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background-color: #666;
+}
+
+/* Add these new styles */
+@keyframes pulse-border {
+  0%, 100% { border-color: #333; }
+  50% { border-color: #444; }
+}
+
+.builder-empty-state {
+  animation: pulse-border 3s ease-in-out infinite;
+}
+
+.builder-grid {
+  background-image: 
+    linear-gradient(to right, #1a1a1a 1px, transparent 1px),
+    linear-gradient(to bottom, #1a1a1a 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+}
+
+.builder-drop-indicator {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.builder-drop-indicator.active {
+  opacity: 1;
 }
