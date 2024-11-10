@@ -22,11 +22,11 @@ export function Sidebar() {
     e.dataTransfer.effectAllowed = 'copy';
     
     const preview = document.createElement('div');
-    preview.className = 'bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-2xl';
-    preview.textContent = componentType;
+    preview.className = 'fixed top-0 left-0 bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg shadow-lg text-sm text-gray-300 w-[200px]';
+    preview.textContent = `Add ${componentType}`;
     document.body.appendChild(preview);
     e.dataTransfer.setDragImage(preview, 0, 0);
-    setTimeout(() => preview.remove(), 0);
+    requestAnimationFrame(() => preview.remove());
   };
 
   const filteredComponents = Object.entries(groupedComponents).reduce((acc, [category, components]) => {
@@ -40,8 +40,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-80 h-screen flex flex-col bg-[#1a1a1a] border-r border-[#333]">
-      <div className="p-5">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="p-5 space-y-6">
+        <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[#333] flex items-center justify-center">
             <Package className="w-5 h-5 text-gray-300" />
           </div>
@@ -58,7 +58,7 @@ export function Sidebar() {
             placeholder="Search components..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 bg-[#222] rounded-lg pl-9 pr-4 text-sm text-gray-300 placeholder:text-gray-400 border border-[#333] focus:border-[#444] focus:outline-none transition-colors"
+            className="w-full h-9 bg-[#222] rounded-lg pl-9 pr-4 text-sm text-gray-300 placeholder:text-gray-400 border border-[#333] focus:border-[#444] focus:outline-none"
           />
         </div>
       </div>
@@ -66,20 +66,13 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-3">
         <NavigationMenu>
           {Object.entries(filteredComponents).map(([category, components]) => (
-            <motion.div
-              key={category}
-              className="mb-2 rounded-lg bg-[#222] overflow-hidden"
-            >
+            <motion.div key={category} className="mb-2 rounded-lg bg-[#222] overflow-hidden">
               <button
                 onClick={() => setExpandedCategory(expandedCategory === category ? null : category)}
-                className="w-full flex items-center justify-between p-3 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+                className="w-full flex items-center justify-between p-3 text-sm font-medium text-gray-300 hover:text-white"
               >
                 {category}
-                <ChevronDown 
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                    expandedCategory === category ? 'rotate-180' : ''
-                  }`}
-                />
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedCategory === category ? 'rotate-180' : ''}`} />
               </button>
               
               {expandedCategory === category && (
@@ -95,20 +88,15 @@ export function Sidebar() {
                       key={component.name}
                       draggable
                       onDragStart={(e) => handleDragStart(e, component.type)}
-                      className="group p-2 hover:bg-white/5 cursor-move transition-colors"
+                      className="group p-2 hover:bg-white/5 cursor-move"
                     >
-                      <div className="flex items-center gap-3 p-2 rounded-md">
-                        <div className="w-8 h-8 rounded-md bg-[#333] flex items-center justify-center group-hover:bg-[#444] transition-colors">
+                      <div className="flex items-center gap-3 p-2">
+                        <div className="w-8 h-8 rounded-md bg-[#333] flex items-center justify-center group-hover:bg-[#444]">
                           <component.icon className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
                         </div>
-                        
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-300 group-hover:text-white">
-                            {component.name}
-                          </p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {component.description}
-                          </p>
+                          <p className="text-sm font-medium text-gray-300 group-hover:text-white">{component.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{component.description}</p>
                         </div>
                       </div>
                     </div>

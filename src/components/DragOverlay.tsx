@@ -8,8 +8,9 @@ export function DragOverlay({ children }: { children: React.ReactNode }) {
     <DndDragOverlay>
       <motion.div
         initial={{ scale: 1 }}
-        animate={{ scale: 1.05 }}
+        animate={{ scale: 1.02 }}
         transition={{ duration: 0.2 }}
+        style={{ pointerEvents: 'none', opacity: 0.9 }}
       >
         {children}
       </motion.div>
