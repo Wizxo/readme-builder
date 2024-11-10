@@ -2,13 +2,13 @@
 
 import { DndContext, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DraggableComponent } from '@/components/DraggableComponent';
 import { DragOverlay } from '@/components/DragOverlay';
 import { Preview } from '@/components/Preview';
 import { nanoid } from 'nanoid';
-import { Plus, Save, Download } from 'lucide-react';
+import { Plus, Save, Download, Undo, Command, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfigPanel } from '@/components/ConfigPanel';
 
@@ -21,31 +21,60 @@ export interface Component {
 
 export default function BuilderPage() {
   const [components, setComponents] = useState<Component[]>([]);
+  const [history, setHistory] = useState<Component[][]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeConfig, setActiveConfig] = useState<Component | null>(null);
 
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as string);
-  }
+  // Load saved components on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('readme-components');
+    if (saved) {
+      try {
+        setComponents(JSON.parse(saved));
+      } catch (error) {
+        toast.error('Failed to load saved components');
+      }
+    }
+  }, []);
 
-  function handleDragEnd(event: DragEndEvent) {
+  // Update history when components change
+  useEffect(() => {
+    if (components.length > 0) {
+      setHistory(prev => [...prev.slice(-9), components]);
+    }
+  }, [components]);
+
+  const handleUndo = useCallback(() => {
+    if (history.length > 1) {
+      setHistory(prev => prev.slice(0, -1));
+      setComponents(history[history.length - 2]);
+    }
+  }, [history]);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      const oldIndex = components.findIndex((item) => item.id === active.id);
-      const newIndex = components.findIndex((item) => item.id === over.id);
-      
-      const newComponents = [...components];
-      const [removed] = newComponents.splice(oldIndex, 1);
-      newComponents.splice(newIndex, 0, removed);
-      
-      setComponents(newComponents);
+      setComponents(prev => {
+        const oldIndex = prev.findIndex((item) => item.id === active.id);
+        const newIndex = prev.findIndex((item) => item.id === over.id);
+        
+        const newComponents = [...prev];
+        const [removed] = newComponents.splice(oldIndex, 1);
+        newComponents.splice(newIndex, 0, removed);
+        
+        return newComponents;
+      });
     }
-  }
+  }, []);
 
-  function handleDrop(e: React.DragEvent) {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
     const componentType = e.dataTransfer.getData('componentType');
@@ -57,8 +86,9 @@ export default function BuilderPage() {
       content: `New ${componentType}`,
     };
     
-    setComponents([...components, newComponent]);
-  }
+    setComponents(prev => [...prev, newComponent]);
+    toast.success(`Added ${componentType} component`);
+  }, []);
 
   function handleSave() {
     try {
@@ -158,33 +188,62 @@ export default function BuilderPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <header className="border-b border-[#222] p-4">
-        <div className="flex items-center justify-between max-w-[1600px] mx-auto">
-          <h1 className="text-xl font-bold">README Builder</h1>
-          <div className="flex items-center gap-3">
-            <button 
+    <div className="h-screen flex flex-col bg-gradient-to-b from-black to-gray-900/50">
+      {/* Header */}
+      <header className="border-b border-white/5 bg-black/30 backdrop-blur-xl">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-lg font-semibold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              readme.build
+            </span>
+            <div className="h-4 w-px bg-white/5" />
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <Command className="w-4 h-4" />
+              <span>Builder</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={history.length <= 1}
+              className="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Undo"
+            >
+              <Undo className="w-4 h-4" />
+            </button>
+            <button
               onClick={handleSave}
-              className="px-4 py-2 rounded-lg bg-component-bg hover:bg-[#252525] transition-colors"
+              className="p-2 rounded-lg hover:bg-white/5"
+              title="Save"
             >
               <Save className="w-4 h-4" />
             </button>
-            <button 
+            <button
               onClick={handleDownload}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-white/90 transition-colors"
             >
               <Download className="w-4 h-4" />
+              Export
             </button>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-[1fr_1px_1fr] overflow-hidden">
+      {/* Main Content */}
+      <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
+        {/* Builder Panel */}
         <div 
-          className={`overflow-auto p-8 transition-colors ${isDraggingOver ? 'bg-[#1a1a1a]/50' : ''}`}
+          className={`
+            overflow-auto p-8 transition-colors
+            ${isDraggingOver ? 'bg-white/[0.02]' : ''}
+          `}
           onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDraggingOver(true);
+          }}
+          onDragLeave={() => setIsDraggingOver(false)}
         >
           <DndContext 
             onDragStart={handleDragStart}
@@ -198,17 +257,17 @@ export default function BuilderPage() {
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-2 border-dashed border-gray-800 rounded-lg p-12 text-center"
+                      className="border border-white/5 rounded-xl p-12 text-center bg-white/[0.02]"
                     >
                       <div className="flex flex-col items-center gap-4">
-                        <div className="p-4 rounded-full bg-gray-800/50">
-                          <Plus className="w-8 h-8" />
+                        <div className="p-4 rounded-full bg-white/5">
+                          <Plus className="w-8 h-8 text-white/40" />
                         </div>
                         <div>
-                          <p className="text-lg text-gray-400 mb-2">
+                          <p className="text-lg font-medium text-white/80 mb-2">
                             Start Building Your README
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-white/40">
                             Drag components from the sidebar or click to add
                           </p>
                         </div>
