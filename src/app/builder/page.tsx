@@ -223,19 +223,25 @@ export default function BuilderPage() {
   }
 
   const handleUpdate = useCallback((id: string, updates: Partial<Component>) => {
-    setComponents(components.map(component => 
-      component.id === id 
-        ? { 
-            ...component, 
-            ...updates,
-            config: {
-              ...component.config,
-              ...updates.config
-            }
+    setComponents(components.map(component => {
+      if (component.id === id) {
+        const updatedComponent = { 
+          ...component, 
+          ...updates,
+          config: {
+            ...component.config,
+            ...updates.config
           }
-        : component
-    ));
-  }, [components]);
+        };
+        // Update the active config if this is the component being configured
+        if (activeConfig?.id === id) {
+          setActiveConfig(updatedComponent);
+        }
+        return updatedComponent;
+      }
+      return component;
+    }));
+  }, [components, activeConfig]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
