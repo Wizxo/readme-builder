@@ -13,7 +13,10 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "framer-motion": "^11.11.11",
+    "katex": "^0.16.9",
     "lucide-react": "^0.456.0",
+    "mermaid": "^10.8.0",
+    "nanoid": "^5.0.6",
     "next": "15.0.3",
     "react": "19.0.0-rc-66855b96-20241106",
     "react-dom": "19.0.0-rc-66855b96-20241106",
@@ -25,10 +28,7 @@
     "remark-gfm": "^4.0.0",
     "remark-github": "^12.0.0",
     "remark-math": "^6.0.0",
-    "katex": "^0.16.9",
-    "mermaid": "^10.8.0",
-    "sonner": "^1.7.0",
-    "nanoid": "^5.0.6"
+    "sonner": "^1.7.0"
   },
   "devDependencies": {
     "@types/node": "^20",

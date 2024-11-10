@@ -1,6 +1,7 @@
 'use client';
 
-import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor, DragOverEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor, DragOverEvent, DragOverlay, useDroppable, pointerWithin } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DraggableComponent } from '@/components/DraggableComponent';
@@ -19,7 +20,12 @@ export interface Component {
   config?: Record<string, any>;
 }
 
-function DroppableArea({ children }: { children: React.ReactNode }) {
+interface DroppableAreaProps {
+  children: React.ReactNode;
+  components: Component[];
+}
+
+function DroppableArea({ children, components }: DroppableAreaProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'drop-container',
   });
@@ -32,9 +38,14 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
         ${isOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
       `}
     >
-      <div className="space-y-3 max-w-2xl mx-auto">
-        {children}
-      </div>
+      <SortableContext 
+        items={components.map(c => c.id)} 
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-3 max-w-2xl mx-auto">
+          {children}
+        </div>
+      </SortableContext>
     </div>
   );
 }
@@ -265,7 +276,7 @@ export default function BuilderPage() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
-      collisionDetection={closestCenter}
+      collisionDetection={pointerWithin}
     >
       <div className="flex h-screen">
         <Sidebar />
@@ -313,7 +324,7 @@ export default function BuilderPage() {
 
           {/* Main Content */}
           <div className="flex-1 grid grid-cols-[1fr,1px,1fr] h-[calc(100vh-3.5rem)]">
-            <DroppableArea>
+            <DroppableArea components={components}>
               {components.map((component) => (
                 <DraggableComponent 
                   key={component.id} 
