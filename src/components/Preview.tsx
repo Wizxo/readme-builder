@@ -11,6 +11,10 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
+import remarkBreaks from 'remark-breaks';
+import remarkEmoji from 'remark-emoji';
+import remarkToc from 'remark-toc';
+import rehypeKatex from 'rehype-katex';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Code, Copy, Check } from 'lucide-react';
 import type { Component } from '@/app/builder/page';
@@ -20,29 +24,6 @@ import { toast } from 'sonner';
 interface PreviewProps {
   components: Component[];
 }
-
-const markdownStyles = {
-  p: 'text-white/70 mb-4',
-  h1: 'text-white/90 text-4xl font-bold mb-6',
-  h2: 'text-white/90 text-3xl font-bold mb-5',
-  h3: 'text-white/90 text-2xl font-bold mb-4',
-  h4: 'text-white/90 text-xl font-bold mb-4',
-  h5: 'text-white/90 text-lg font-bold mb-3',
-  h6: 'text-white/90 text-base font-bold mb-3',
-  strong: 'text-white/90 font-bold',
-  em: 'italic',
-  ul: 'list-disc list-inside mb-4 text-white/70 space-y-2',
-  ol: 'list-decimal list-inside mb-4 text-white/70 space-y-2',
-  li: 'ml-4',
-  a: 'text-blue-400 hover:underline',
-  blockquote: 'border-l-4 border-white/10 pl-4 italic text-white/60 mb-4',
-  table: 'w-full border-collapse mb-4',
-  th: 'border border-white/10 px-4 py-2 text-left text-white/90 bg-white/5',
-  td: 'border border-white/10 px-4 py-2 text-white/70',
-  img: 'max-w-full h-auto rounded-lg mb-4',
-  pre: 'mb-4 rounded-lg overflow-auto',
-  code: 'bg-[#1a1a1a] px-1.5 py-0.5 rounded text-sm text-white/90 font-mono',
-};
 
 export function Preview({ components }: PreviewProps) {
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
@@ -122,56 +103,70 @@ export function Preview({ components }: PreviewProps) {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'preview' ? (
-              <div className="rounded-lg bg-white/[0.02] p-8">
+              <div className="prose prose-invert max-w-none prose-pre:bg-[#1E1E1E] prose-pre:p-4 rounded-lg bg-white/[0.02] p-8">
                 <ReactMarkdown
+                  children={markdown}
                   remarkPlugins={[
                     remarkGfm,
                     remarkMath,
+                    remarkBreaks,
+                    remarkEmoji,
+                    [remarkToc, { heading: 'contents', tight: true }],
                     [remarkGithub, { repository: 'yourusername/readme-builder' }]
                   ]}
-                  rehypePlugins={[rehypeRaw, rehypeSlug, rehypeAutolinkHeadings]}
+                  rehypePlugins={[
+                    rehypeRaw,
+                    rehypeSlug,
+                    rehypeKatex,
+                    [rehypeAutolinkHeadings, {
+                      behavior: 'wrap',
+                      properties: {
+                        className: ['anchor']
+                      }
+                    }]
+                  ]}
                   components={{
-                    // Map each HTML element to its styled version
-                    p: ({node, ...props}) => <p className={markdownStyles.p} {...props} />,
-                    h1: ({node, ...props}) => <h1 className={markdownStyles.h1} {...props} />,
-                    h2: ({node, ...props}) => <h2 className={markdownStyles.h2} {...props} />,
-                    h3: ({node, ...props}) => <h3 className={markdownStyles.h3} {...props} />,
-                    h4: ({node, ...props}) => <h4 className={markdownStyles.h4} {...props} />,
-                    h5: ({node, ...props}) => <h5 className={markdownStyles.h5} {...props} />,
-                    h6: ({node, ...props}) => <h6 className={markdownStyles.h6} {...props} />,
-                    strong: ({node, ...props}) => <strong className={markdownStyles.strong} {...props} />,
-                    em: ({node, ...props}) => <em className={markdownStyles.em} {...props} />,
-                    ul: ({node, ...props}) => <ul className={markdownStyles.ul} {...props} />,
-                    ol: ({node, ...props}) => <ol className={markdownStyles.ol} {...props} />,
-                    li: ({node, ...props}) => <li className={markdownStyles.li} {...props} />,
-                    a: ({node, ...props}) => <a className={markdownStyles.a} {...props} />,
-                    blockquote: ({node, ...props}) => <blockquote className={markdownStyles.blockquote} {...props} />,
-                    table: ({node, ...props}) => <table className={markdownStyles.table} {...props} />,
-                    th: ({node, ...props}) => <th className={markdownStyles.th} {...props} />,
-                    td: ({node, ...props}) => <td className={markdownStyles.td} {...props} />,
-                    img: ({node, ...props}) => <img className={markdownStyles.img} {...props} />,
-                    pre: ({node, ...props}) => <pre className={markdownStyles.pre} {...props} />,
                     code({node, inline, className, children, ...props}) {
                       const match = /language-(\w+)/.exec(className || '');
                       return !inline && match ? (
                         <SyntaxHighlighter
+                          {...props}
                           style={vscDarkPlus}
                           language={match[1]}
                           PreTag="div"
-                          {...props}
+                          showLineNumbers
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       ) : (
-                        <code className={markdownStyles.code} {...props}>
+                        <code 
+                          className={className + " bg-[#1a1a1a] px-1.5 py-0.5 rounded text-sm text-white/90 font-mono"} 
+                          {...props}
+                        >
                           {children}
                         </code>
                       );
-                    }
+                    },
+                    h1: ({node, ...props}) => <h1 className="text-3xl font-bold mb-4" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-2xl font-bold mb-3" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="text-xl font-bold mb-2" {...props} />,
+                    p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4" {...props} />,
+                    li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                    a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
+                    blockquote: ({node, ...props}) => (
+                      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />
+                    ),
+                    table: ({node, ...props}) => (
+                      <div className="overflow-x-auto my-4">
+                        <table className="min-w-full divide-y divide-gray-700" {...props} />
+                      </div>
+                    ),
+                    th: ({node, ...props}) => <th className="px-4 py-2 bg-gray-800" {...props} />,
+                    td: ({node, ...props}) => <td className="px-4 py-2 border-t border-gray-700" {...props} />
                   }}
-                >
-                  {markdown}
-                </ReactMarkdown>
+                />
               </div>
             ) : (
               <pre className="rounded-lg bg-white/[0.02] p-8 overflow-auto">
