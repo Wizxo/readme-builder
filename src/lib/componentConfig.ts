@@ -770,26 +770,44 @@ export const componentConfigs: Record<string, ComponentConfig> = {
       }
     ],
     markdownGenerator: (component) => {
-      const platform = component.config?.platform;
-      const username = component.config?.username;
+      const platform = component.config?.platform || 'linkedin';
+      const username = component.config?.username || '';
+      
       const badges = {
         linkedin: {
-          badge: 'https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white',
+          name: 'LinkedIn',
+          color: '0077B5',
+          logo: 'linkedin',
           url: `https://linkedin.com/in/${username}`
         },
         twitter: {
-          badge: 'https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white',
+          name: 'Twitter',
+          color: '1DA1F2',
+          logo: 'twitter',
           url: `https://twitter.com/${username}`
         },
         dev: {
-          badge: 'https://img.shields.io/badge/dev.to-0A0A0A?style=for-the-badge&logo=dev.to&logoColor=white',
+          name: 'Dev.to',
+          color: '0A0A0A',
+          logo: 'dev.to',
           url: `https://dev.to/${username}`
+        },
+        medium: {
+          name: 'Medium',
+          color: '12100E',
+          logo: 'medium',
+          url: `https://medium.com/@${username}`
+        },
+        hashnode: {
+          name: 'Hashnode',
+          color: '2962FF',
+          logo: 'hashnode',
+          url: `https://hashnode.com/@${username}`
         }
-        // Add more platforms as needed
       };
-      
-      const badge = badges[platform];
-      return `[![${platform}](${badge.badge})](${badge.url})`;
+
+      const badge = badges[platform] || badges.linkedin;
+      return `[![${badge.name}](https://img.shields.io/badge/${badge.name}-${badge.color}?style=for-the-badge&logo=${badge.logo}&logoColor=white)](${badge.url})`;
     }
   },
 
