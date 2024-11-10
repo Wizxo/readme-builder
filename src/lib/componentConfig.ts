@@ -860,6 +860,8 @@ export const componentConfigs: Record<string, ComponentConfig> = {
     ],
     markdownGenerator: (component) => {
       const tech = getTechConfig(component.config?.technology);
+      if (!tech) return ''; // Return empty string if no tech config
+      
       const style = component.config?.style || 'for-the-badge';
       return `![${tech.name}](https://img.shields.io/badge/${tech.name}-${tech.color}?style=${style}&logo=${tech.logo}&logoColor=${tech.logoColor})`;
     }
@@ -1065,13 +1067,20 @@ const techStackConfig = {
 
 // Helper function to get tech configuration
 function getTechConfig(techKey: string) {
+  if (!techKey) return null;
+  
   // Traverse through categories to find the tech config
   for (const category of Object.values(techStackConfig)) {
     if (category[techKey]) {
       return category[techKey];
     }
   }
-  return null;
+  return {
+    name: techKey,
+    color: '%23333333',
+    logo: 'code',
+    logoColor: 'white'
+  };
 }
 
 // Add this function to dynamically update technology options based on category
