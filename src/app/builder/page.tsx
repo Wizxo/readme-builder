@@ -23,9 +23,10 @@ export interface Component {
 interface DroppableAreaProps {
   children: React.ReactNode;
   components: Component[];
+  isDraggingNew: boolean;
 }
 
-function DroppableArea({ children, components }: DroppableAreaProps) {
+function DroppableArea({ children, components, isDraggingNew }: DroppableAreaProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'drop-container',
   });
@@ -35,7 +36,7 @@ function DroppableArea({ children, components }: DroppableAreaProps) {
       ref={setNodeRef}
       className={`
         h-full overflow-auto p-6
-        ${isOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
+        ${isOver && isDraggingNew ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
       `}
     >
       <SortableContext 
@@ -298,7 +299,7 @@ export default function BuilderPage() {
 
           {/* Main Content */}
           <div className="flex-1 grid grid-cols-[1fr,1px,1fr] h-[calc(100vh-3.5rem)]">
-            <DroppableArea components={components}>
+            <DroppableArea components={components} isDraggingNew={isDraggingNew}>
               {components.map((component) => (
                 <DraggableComponent 
                   key={component.id} 
