@@ -188,42 +188,42 @@ export default function BuilderPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-black to-gray-900/50">
+    <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-white/5 bg-black/30 backdrop-blur-xl">
-        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-              readme.build
+      <header className="border-b border-[#222] bg-[#111] z-10">
+        <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-base font-medium">
+              README Builder
             </span>
-            <div className="h-4 w-px bg-white/5" />
+            <div className="h-3 w-px bg-[#333]" />
             <div className="flex items-center gap-2 text-sm text-gray-400">
-              <Command className="w-4 h-4" />
-              <span>Builder</span>
+              <Command className="w-3.5 h-3.5" />
+              <span>Editor</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleUndo}
               disabled={history.length <= 1}
-              className="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 rounded-md hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
               title="Undo"
             >
               <Undo className="w-4 h-4" />
             </button>
             <button
               onClick={handleSave}
-              className="p-2 rounded-lg hover:bg-white/5"
+              className="p-2 rounded-md hover:bg-[#222]"
               title="Save"
             >
               <Save className="w-4 h-4" />
             </button>
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-white/90 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-white text-black rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5" />
               Export
             </button>
           </div>
@@ -235,15 +235,12 @@ export default function BuilderPage() {
         {/* Builder Panel */}
         <div 
           className={`
-            overflow-auto p-8 transition-colors
-            ${isDraggingOver ? 'bg-white/[0.02]' : ''}
+            overflow-auto p-6 transition-colors
+            ${isDraggingOver ? 'bg-[#111]' : ''}
           `}
           onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDraggingOver(true);
-          }}
-          onDragLeave={() => setIsDraggingOver(false)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
         >
           <DndContext 
             onDragStart={handleDragStart}
@@ -251,24 +248,24 @@ export default function BuilderPage() {
             collisionDetection={closestCenter}
           >
             <SortableContext items={components} strategy={verticalListSortingStrategy}>
-              <motion.div layout className="space-y-4 max-w-2xl mx-auto">
+              <motion.div layout className="space-y-3 max-w-2xl mx-auto">
                 <AnimatePresence mode="popLayout">
                   {components.length === 0 ? (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border border-white/5 rounded-xl p-12 text-center bg-white/[0.02]"
+                      className="border border-[#222] rounded-lg p-8 text-center bg-[#111]"
                     >
                       <div className="flex flex-col items-center gap-4">
-                        <div className="p-4 rounded-full bg-white/5">
-                          <Plus className="w-8 h-8 text-white/40" />
+                        <div className="p-3 rounded-full bg-[#191919]">
+                          <Plus className="w-6 h-6 text-gray-400" />
                         </div>
                         <div>
-                          <p className="text-lg font-medium text-white/80 mb-2">
+                          <p className="text-base font-medium text-gray-200 mb-1">
                             Start Building Your README
                           </p>
-                          <p className="text-sm text-white/40">
-                            Drag components from the sidebar or click to add
+                          <p className="text-sm text-gray-400">
+                            Drag components from the sidebar to get started
                           </p>
                         </div>
                       </div>
@@ -299,9 +296,9 @@ export default function BuilderPage() {
           </DndContext>
         </div>
 
-        <div className="bg-[#222222] w-px h-full" />
+        <div className="bg-[#222] w-px h-full" />
         
-        <div className="overflow-auto p-8">
+        <div className="overflow-auto">
           <Preview components={components} />
         </div>
 
