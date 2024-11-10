@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Search, Package, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { componentConfigs, type ComponentConfig } from '@/lib/componentConfig';
+import { useDraggable } from '@dnd-kit/core';
 
 const groupedComponents = Object.values(componentConfigs).reduce((acc, config) => {
   const category = config.category || 'Other';
@@ -16,18 +17,6 @@ const groupedComponents = Object.values(componentConfigs).reduce((acc, config) =
 export function Sidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-
-  const handleDragStart = (e: React.DragEvent, componentType: string) => {
-    e.dataTransfer.setData('componentType', componentType);
-    e.dataTransfer.effectAllowed = 'copy';
-    
-    const preview = document.createElement('div');
-    preview.className = 'fixed top-0 left-0 bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg shadow-lg text-sm text-gray-300 w-[200px]';
-    preview.textContent = `Add ${componentType}`;
-    document.body.appendChild(preview);
-    e.dataTransfer.setDragImage(preview, 0, 0);
-    requestAnimationFrame(() => preview.remove());
-  };
 
   const filteredComponents = Object.entries(groupedComponents).reduce((acc, [category, components]) => {
     const filtered = components.filter(component => 
@@ -84,22 +73,7 @@ export function Sidebar() {
                   className="border-t border-[var(--border-color)]"
                 >
                   {components.map((component) => (
-                    <div
-                      key={component.name}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, component.type)}
-                      className="group p-2 hover:bg-[var(--hover-bg)] cursor-move"
-                    >
-                      <div className="flex items-center gap-3 p-2">
-                        <div className="w-8 h-8 rounded-md bg-[var(--border-color)] flex items-center justify-center group-hover:bg-[var(--hover-border)]">
-                          <component.icon className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-300 group-hover:text-white">{component.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{component.description}</p>
-                        </div>
-                      </div>
-                    </div>
+                    <DraggableComponentItem key={component.name} component={component} />
                   ))}
                 </motion.div>
               )}
@@ -110,3 +84,40 @@ export function Sidebar() {
     </aside>
   );
 } 
+
+const DraggableComponentItem = ({ component }: { component: ComponentConfig }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    isDragging
+  } = useDraggable({
+    id: `new-${component.type}`,
+    data: {
+      type: 'new',
+      component
+    }
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`
+        group p-2 hover:bg-[var(--hover-bg)] cursor-move
+        ${isDragging ? 'opacity-50' : ''}
+      `}
+    >
+      <div className="flex items-center gap-3 p-2">
+        <div className="w-8 h-8 rounded-md bg-[var(--border-color)] flex items-center justify-center group-hover:bg-[var(--hover-border)]">
+          <component.icon className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-gray-300 group-hover:text-white">{component.name}</p>
+          <p className="text-xs text-gray-500 truncate">{component.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}; 

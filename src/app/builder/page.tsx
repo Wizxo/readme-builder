@@ -1,11 +1,10 @@
 'use client';
 
-import { DndContext, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor, DragOverEvent, DragOverlay } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DraggableComponent } from '@/components/DraggableComponent';
-import { DragOverlay } from '@/components/DragOverlay';
 import { Preview } from '@/components/Preview';
 import { Sidebar } from "@/components/Sidebar";
 import { nanoid } from 'nanoid';
@@ -26,6 +25,7 @@ export default function BuilderPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeConfig, setActiveConfig] = useState<Component | null>(null);
+  const [isDraggingNew, setIsDraggingNew] = useState(false);
 
   // Load saved components on mount
   useEffect(() => {
@@ -54,14 +54,38 @@ export default function BuilderPage() {
   }, [history]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const { active } = event;
+    setActiveId(active.id as string);
+    setIsDraggingNew(active.data?.current?.type === 'new');
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    setIsDraggingOver(!!event.over);
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveId(null);
     const { active, over } = event;
+    setActiveId(null);
+    setIsDraggingOver(false);
+    setIsDraggingNew(false);
     
-    if (over && active.id !== over.id) {
+    if (!over) return;
+
+    // Handle new component drops
+    if (active.data?.current?.type === 'new') {
+      const componentType = active.data.current.component.type;
+      const newComponent: Component = {
+        id: nanoid(),
+        type: componentType,
+        content: `New ${componentType}`,
+      };
+      setComponents(prev => [...prev, newComponent]);
+      toast.success(`Added ${componentType} component`);
+      return;
+    }
+
+    // Handle reordering
+    if (active.id !== over.id) {
       setComponents(prev => {
         const oldIndex = prev.findIndex((item) => item.id === active.id);
         const newIndex = prev.findIndex((item) => item.id === over.id);
@@ -73,22 +97,6 @@ export default function BuilderPage() {
         return newComponents;
       });
     }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-    const componentType = e.dataTransfer.getData('componentType');
-    if (!componentType) return;
-    
-    const newComponent: Component = {
-      id: nanoid(),
-      type: componentType,
-      content: `New ${componentType}`,
-    };
-    
-    setComponents(prev => [...prev, newComponent]);
-    toast.success(`Added ${componentType} component`);
   }, []);
 
   function handleSave() {
@@ -178,78 +186,75 @@ export default function BuilderPage() {
     ));
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDraggingOver(false);
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="h-screen flex flex-col bg-[var(--background)]">
-          {/* Header */}
-          <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
-            <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-base font-medium">
-                  README Builder
-                </span>
-                <div className="h-3 w-px bg-[#333]" />
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Command className="w-3.5 h-3.5" />
-                  <span>Editor</span>
+    <DndContext 
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      collisionDetection={closestCenter}
+    >
+      <div className="flex h-screen">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
+          <div className="h-screen flex flex-col bg-[var(--background)]">
+            {/* Header */}
+            <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
+              <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-base font-medium">
+                    README Builder
+                  </span>
+                  <div className="h-3 w-px bg-[#333]" />
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Command className="w-3.5 h-3.5" />
+                    <span>Editor</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleUndo}
+                    disabled={history.length <= 1}
+                    className="p-2 rounded-md hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Undo"
+                  >
+                    <Undo className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="p-2 rounded-md hover:bg-[#222]"
+                    title="Save"
+                  >
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white text-black rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Export
+                  </button>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={handleUndo}
-                  disabled={history.length <= 1}
-                  className="p-2 rounded-md hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Undo"
-                >
-                  <Undo className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="p-2 rounded-md hover:bg-[#222]"
-                  title="Save"
-                >
-                  <Save className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white text-black rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-              </div>
-            </div>
-          </header>
+            </header>
 
-          {/* Main Content */}
-          <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
-            {/* Builder Panel */}
-            <div 
-              className={`
-                overflow-auto p-6 transition-colors
-                ${isDraggingOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
-              `}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <DndContext 
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd} 
-                collisionDetection={closestCenter}
+            {/* Main Content */}
+            <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
+              {/* Builder Panel */}
+              <div 
+                className={`
+                  overflow-auto p-6 transition-colors
+                  ${isDraggingOver && isDraggingNew ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
+                `}
               >
                 <SortableContext items={components} strategy={verticalListSortingStrategy}>
                   <motion.div layout className="space-y-3 max-w-2xl mx-auto">
@@ -288,41 +293,46 @@ export default function BuilderPage() {
                     </AnimatePresence>
                   </motion.div>
                 </SortableContext>
-                
-                <DragOverlay>
-                  {activeId ? (
-                    <DraggableComponent 
-                      component={components.find(c => c.id === activeId)!}
-                      isDragOverlay
-                    />
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            </div>
+              </div>
 
-            <div className="bg-[#222] w-px h-full" />
-            
-            <div className="overflow-auto">
-              <Preview components={components} />
-            </div>
+              <div className="bg-[#222] w-px h-full" />
+              
+              <div className="overflow-auto">
+                <Preview components={components} />
+              </div>
 
-            <AnimatePresence>
-              {activeConfig && (
-                <ConfigPanel
-                  component={activeConfig}
-                  onUpdate={handleUpdate}
-                  onClose={() => setActiveConfig(null)}
-                  onDelete={(id) => {
-                    handleDelete(id);
-                    setActiveConfig(null);
-                  }}
-                />
-              )}
-            </AnimatePresence>
+              <AnimatePresence>
+                {activeConfig && (
+                  <ConfigPanel
+                    component={activeConfig}
+                    onUpdate={handleUpdate}
+                    onClose={() => setActiveConfig(null)}
+                    onDelete={(id) => {
+                      handleDelete(id);
+                      setActiveConfig(null);
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+      <DragOverlay>
+        {activeId && (
+          <DraggableComponent 
+            component={
+              components.find(c => c.id === activeId) || {
+                id: 'new',
+                type: activeId.replace('new-', ''),
+                content: ''
+              }
+            }
+            isDragOverlay
+          />
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
