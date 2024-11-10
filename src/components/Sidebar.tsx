@@ -1,125 +1,30 @@
 'use client';
 
 import { NavigationMenu } from "@radix-ui/react-navigation-menu";
-import { 
-  Text, 
-  Image, 
-  Heading, 
-  List, 
-  Table, 
-  Video, 
-  Code, 
-  Terminal, 
-  Quote, 
-  CheckSquare, 
-  Link2, 
-  Minus, 
-  Shield, 
-  ChevronDown,
-  FileText,
-  AlertCircle
-} from "lucide-react";
+import { componentConfigs, type ComponentConfig } from '@/lib/componentConfig';
 
-const components = [
-  // Documentation Essentials
-  {
-    category: "Essential",
-    items: [
-      { 
-        name: "Headings", 
-        icon: Heading,
-        description: "Section titles (H1-H6)",
-        examples: ["# Main Title", "## Section", "### Subsection"]
-      },
-      { 
-        name: "Text", 
-        icon: Text,
-        description: "Paragraphs with markdown support",
-        examples: ["Regular text", "**Bold**", "*Italic*", "~~Strikethrough~~"]
-      },
-      { 
-        name: "Lists", 
-        icon: List,
-        description: "Ordered and unordered lists",
-        examples: ["- Bullet point", "1. Numbered", "- [ ] Task"]
-      }
-    ]
-  },
-  // Code & Technical
-  {
-    category: "Code",
-    items: [
-      {
-        name: "CodeBlock",
-        icon: Code,
-        description: "Syntax-highlighted code blocks",
-        examples: ["```javascript\ncode here\n```"]
-      },
-      {
-        name: "InlineCode",
-        icon: Terminal,
-        description: "Inline code snippets",
-        examples: ["`code`"]
-      }
-    ]
-  },
-  // Media & Links
-  {
-    category: "Media",
-    items: [
-      { 
-        name: "Images", 
-        icon: Image,
-        description: "Images, badges, and icons",
-        examples: ["![Alt text](url)"]
-      },
-      {
-        name: "Badge",
-        icon: Shield,
-        description: "Status and info badges",
-        examples: ["![Badge](https://shields.io/badge/...)"]
-      },
-      {
-        name: "Link",
-        icon: Link2,
-        description: "Hyperlinks and references",
-        examples: ["[Text](url)"]
-      }
-    ]
-  },
-  // Advanced Elements
-  {
-    category: "Advanced",
-    items: [
-      {
-        name: "Blockquote",
-        icon: Quote,
-        description: "Quote blocks and callouts",
-        examples: ["> Quote text"]
-      },
-      {
-        name: "TaskList",
-        icon: CheckSquare,
-        description: "GitHub-style task lists",
-        examples: ["- [x] Completed", "- [ ] Todo"]
-      },
-      {
-        name: "Tables",
-        icon: Table,
-        description: "Data tables and grids",
-        examples: ["| Header | Header |\n|--------|--------|"]
-      },
-      {
-        name: "Collapsible",
-        icon: ChevronDown,
-        description: "Expandable content sections",
-        examples: ["<details>\n<summary>Title</summary>\nContent\n</details>"]
-      }
-    ]
-  }
-];
+// Group components by category
+const groupedComponents = Object.values(componentConfigs).reduce((acc, config) => {
+  const category = config.category || 'Other';
+  if (!acc[category]) acc[category] = [];
+  acc[category].push(config);
+  return acc;
+}, {} as Record<string, ComponentConfig[]>);
 
 export function Sidebar() {
+  const handleDragStart = (e: React.DragEvent, componentType: string) => {
+    e.dataTransfer.setData('componentType', componentType);
+    e.dataTransfer.effectAllowed = 'copy';
+    
+    // Add a drag preview
+    const preview = document.createElement('div');
+    preview.className = 'bg-component-bg p-4 rounded-lg shadow-lg';
+    preview.textContent = componentType;
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, 0, 0);
+    setTimeout(() => preview.remove(), 0);
+  };
+
   return (
     <aside className="sidebar w-80 h-screen flex flex-col">
       <div className="p-6 border-b border-[#222]">
@@ -134,23 +39,20 @@ export function Sidebar() {
       
       <nav className="flex-1 overflow-y-auto">
         <NavigationMenu>
-          {components.map((category) => (
-            <section key={category.category} className="category-section">
+          {Object.entries(groupedComponents).map(([category, components]) => (
+            <section key={category} className="category-section">
               <div className="px-6 py-3">
                 <h3 className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                  {category.category}
+                  {category}
                 </h3>
               </div>
               
               <div>
-                {category.items.map((component) => (
+                {components.map((component) => (
                   <div
                     key={component.name}
                     draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('componentType', component.name);
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
+                    onDragStart={(e) => handleDragStart(e, component.type)}
                     className="component-card"
                   >
                     <div className="flex items-center gap-3 px-6 py-2.5 hover:bg-[#1a1a1a] cursor-move group">

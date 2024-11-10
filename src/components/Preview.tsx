@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion } from 'framer-motion';
 import type { Component } from '@/app/builder/page';
+import { generateMarkdown } from '@/lib/componentConfig';
 
 interface Props {
   components: Component[];
@@ -12,40 +13,8 @@ interface Props {
 
 export function Preview({ components }: Props) {
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
-  const markdown = components
-    .map((component) => {
-      switch (component.type) {
-        case 'CodeBlock':
-          return `\`\`\`${component.config?.language || ''}\n${component.content}\n\`\`\``;
-        case 'InlineCode':
-          return `\`${component.content}\``;
-        case 'Blockquote':
-          return `> ${component.content}`;
-        case 'TaskList':
-          return `- [${component.config?.checked ? 'x' : ' '}] ${component.content}`;
-        case 'Link':
-          return `[${component.content}](${component.config?.url || '#'})`;
-        case 'Divider':
-          return '---';
-        case 'Badge':
-          return `![${component.config?.label || ''}](${component.content})`;
-        case 'Collapsible':
-          return `<details>\n<summary>${component.config?.summary || 'Details'}</summary>\n\n${component.content}\n</details>`;
-        case 'Headings':
-          return `# ${component.content}`;
-        case 'Text':
-          return component.content;
-        case 'Images':
-          return `![${component.content}](${component.content})`;
-        case 'Lists':
-          return `- ${component.content}`;
-        case 'Tables':
-          return `| Column 1 | Column 2 |\n|----------|----------|\n| ${component.content} | Content |`;
-        default:
-          return component.content;
-      }
-    })
-    .join('\n\n');
+
+  const markdown = components.map(generateMarkdown).join('\n\n');
 
   return (
     <div className="h-full flex flex-col">
@@ -80,7 +49,9 @@ export function Preview({ components }: Props) {
         >
           {activeTab === 'preview' ? (
             <div className="prose prose-invert max-w-none p-8 bg-component-bg rounded-lg">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {markdown}
+              </ReactMarkdown>
             </div>
           ) : (
             <pre className="p-8 bg-component-bg rounded-lg">

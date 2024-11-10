@@ -2,21 +2,25 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Settings, GripVertical, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import type { Component } from '@/app/builder/page';
-import { ConfigPanel } from './ConfigPanel';
 
 interface Props {
   component: Component;
   onUpdate?: (id: string, updates: Partial<Component>) => void;
+  onOpenConfig?: (component: Component) => void;
   onDelete?: (id: string) => void;
+  isDragOverlay?: boolean;
 }
 
-export function DraggableComponent({ component, onUpdate, onDelete }: Props) {
-  const [showConfig, setShowConfig] = useState(false);
-  
+export function DraggableComponent({ 
+  component, 
+  onUpdate, 
+  onOpenConfig,
+  onDelete,
+  isDragOverlay 
+}: Props) {
   const {
     attributes,
     listeners,
@@ -24,64 +28,62 @@ export function DraggableComponent({ component, onUpdate, onDelete }: Props) {
     transform,
     transition,
     isDragging
-  } = useSortable({ id: component.id });
+  } = useSortable({ 
+    id: component.id,
+    disabled: isDragOverlay 
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1
   };
 
-  function handleUpdate(id: string, updates: Partial<Component>) {
-    onUpdate?.(id, updates);
-    setShowConfig(false);
-  }
-
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        ref={setNodeRef}
-        style={style}
-        className={`component-card group relative bg-component-bg rounded-lg ${isDragging ? 'z-50' : ''}`}
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        group relative bg-component-bg rounded-xl
+        ${isDragging ? 'opacity-50' : 'opacity-100'}
+        ${isDragOverlay ? 'shadow-2xl ring-2 ring-white/10' : 'hover:ring-2 hover:ring-white/10'}
+        transition-all duration-200
+      `}
+      {...attributes}
+    >
+      {/* Drag Handle - Always Visible */}
+      <div
+        {...listeners}
+        className="absolute left-0 inset-y-0 w-12 flex items-center justify-center cursor-move hover:bg-white/5 transition-colors rounded-l-xl"
       >
-        <div 
-          className="absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-move" 
-          {...attributes} 
-          {...listeners}
-        >
-          <GripVertical className="w-5 h-5 text-gray-500" />
-        </div>
-        
-        <div className="p-4 pl-12">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">{component.type}</span>
-            <button 
-              onClick={() => setShowConfig(true)}
-              className="p-1.5 rounded-md hover:bg-white/5 transition-colors"
-            >
-              <Settings className="w-4 h-4 text-gray-500" />
-            </button>
-          </div>
-          <div className="mt-2">
-            <p className="text-sm text-gray-400">{component.content}</p>
-          </div>
-        </div>
-      </motion.div>
+        <GripVertical className="w-4 h-4 text-gray-500" />
+      </div>
 
-      <AnimatePresence>
-        {showConfig && (
-          <ConfigPanel
-            component={component}
-            onUpdate={handleUpdate}
-            onClose={() => setShowConfig(false)}
-            onDelete={onDelete}
-          />
-        )}
-      </AnimatePresence>
-    </>
+      {/* Action Buttons - Appear on Hover */}
+      {!isDragOverlay && (
+        <div className="absolute right-0 inset-y-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={() => onOpenConfig?.(component)}
+            className="h-full px-4 hover:bg-white/5 text-gray-500 transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => onDelete?.(component.id)}
+            className="h-full px-4 hover:bg-red-500/10 hover:text-red-400 text-gray-500 transition-colors rounded-r-xl"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="pl-12 pr-24 py-4">
+        <div className="flex items-center mb-2">
+          <span className="text-sm font-medium text-gray-300">{component.type}</span>
+        </div>
+        <p className="text-sm text-gray-400">{component.content}</p>
+      </div>
+    </motion.div>
   );
 }
 

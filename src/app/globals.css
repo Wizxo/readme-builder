@@ -3,19 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
   --sidebar-bg: #111111;
   --component-bg: #1a1a1a;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #ffffff;
-    --sidebar-bg: #111111;
-    --component-bg: #1a1a1a;
-  }
 }
 
 body {
@@ -26,36 +17,6 @@ body {
 .sidebar {
   background-color: var(--sidebar-bg);
   border-right: 1px solid #222222;
-}
-
-.sidebar::-webkit-scrollbar {
-  width: 2px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-  background-color: #333;
-}
-
-.category-section {
-  position: relative;
-}
-
-.category-section::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 24px;
-  right: 24px;
-  height: 1px;
-  background-color: #222;
-}
-
-.category-section:last-child::after {
-  display: none;
 }
 
 .component-card {
@@ -77,55 +38,58 @@ body {
   background-color: #252525;
 }
 
-.drag-indicator {
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.dragging-component {
+  cursor: grabbing !important;
 }
 
-.component-card:hover .drag-indicator {
-  opacity: 0.5;
+.dragging-component * {
+  cursor: grabbing !important;
 }
 
-.drag-indicator .dot {
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background-color: #666;
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
 }
 
-/* Add these new styles */
-@keyframes pulse-border {
-  0%, 100% { border-color: #333; }
-  50% { border-color: #444; }
+.component-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.builder-empty-state {
-  animation: pulse-border 3s ease-in-out infinite;
+.component-card:hover {
+  transform: translateY(-1px);
 }
 
-.builder-grid {
-  background-image: 
-    linear-gradient(to right, #1a1a1a 1px, transparent 1px),
-    linear-gradient(to bottom, #1a1a1a 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: 0 0;
+.component-card:active {
+  transform: translateY(0px);
 }
 
-.builder-drop-indicator {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.2s ease;
+/* Add these styles */
+[data-dragging] {
+  cursor: grabbing !important;
 }
 
-.builder-drop-indicator.active {
-  opacity: 1;
+[data-dragging] * {
+  cursor: grabbing !important;
 }
+
+.component-card {
+  cursor: grab;
+}
+
+.component-card:active {
+  cursor: grabbing;
+}
+
+/* Drag preview styles */
+.drag-preview {
+  pointer-events: none;
+  position: fixed;
+  z-index: 100;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+

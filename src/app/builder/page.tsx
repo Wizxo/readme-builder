@@ -1,27 +1,36 @@
 'use client';
 
-import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DraggableComponent } from '@/components/DraggableComponent';
+import { DragOverlay } from '@/components/DragOverlay';
 import { Preview } from '@/components/Preview';
 import { nanoid } from 'nanoid';
 import { Plus, Save, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfigPanel } from '@/components/ConfigPanel';
 
 export interface Component {
   id: string;
   type: string;
   content: string;
-  config?: Record<string, string>;
+  config?: Record<string, any>;
 }
 
 export default function BuilderPage() {
   const [components, setComponents] = useState<Component[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [activeConfig, setActiveConfig] = useState<Component | null>(null);
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
+  }
 
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
@@ -82,15 +91,21 @@ export default function BuilderPage() {
             case 'Collapsible':
               return `<details>\n<summary>${component.config?.summary || 'Details'}</summary>\n\n${component.content}\n</details>`;
             case 'Headings':
-              return `${'#'.repeat(parseInt(component.config?.level || '1'))} ${component.content}`;
+              const level = parseInt(component.config?.level?.charAt(1) || '1');
+              return `${'#'.repeat(level)} ${component.content}`;
             case 'Text':
               return component.content;
             case 'Images':
-              return `![${component.content}](${component.content})`;
+              return `![${component.config?.alt || ''}](${component.content})`;
             case 'Lists':
               return `- ${component.content}`;
             case 'Tables':
-              return `| Column 1 | Column 2 |\n|----------|----------|\n| ${component.content} | Content |`;
+              const columns = (component.config?.columns || 'Column 1, Column 2').split(',').map((c: string) => c.trim());
+              return [
+                `| ${columns.join(' | ')} |`,
+                `| ${columns.map(() => '---').join(' | ')} |`,
+                `| ${columns.map(() => component.content).join(' | ')} |`
+              ].join('\n');
             default:
               return component.content;
           }
@@ -116,6 +131,31 @@ export default function BuilderPage() {
     setComponents(components.filter(component => component.id !== id));
     toast.success('Component deleted');
   }
+
+  function handleUpdate(id: string, updates: Partial<Component>) {
+    setComponents(components.map(component => 
+      component.id === id 
+        ? { 
+            ...component, 
+            ...updates,
+            config: {
+              ...component.config,
+              ...updates.config
+            }
+          }
+        : component
+    ));
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -143,13 +183,14 @@ export default function BuilderPage() {
         <div 
           className={`overflow-auto p-8 transition-colors ${isDraggingOver ? 'bg-[#1a1a1a]/50' : ''}`}
           onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDraggingOver(true);
-          }}
-          onDragLeave={() => setIsDraggingOver(false)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
         >
-          <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+          <DndContext 
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd} 
+            collisionDetection={closestCenter}
+          >
             <SortableContext items={components} strategy={verticalListSortingStrategy}>
               <motion.div layout className="space-y-4 max-w-2xl mx-auto">
                 <AnimatePresence mode="popLayout">
@@ -178,13 +219,24 @@ export default function BuilderPage() {
                       <DraggableComponent 
                         key={component.id} 
                         component={component}
+                        onUpdate={handleUpdate}
                         onDelete={handleDelete}
+                        onOpenConfig={setActiveConfig}
                       />
                     ))
                   )}
                 </AnimatePresence>
               </motion.div>
             </SortableContext>
+            
+            <DragOverlay>
+              {activeId ? (
+                <DraggableComponent 
+                  component={components.find(c => c.id === activeId)!}
+                  isDragOverlay
+                />
+              ) : null}
+            </DragOverlay>
           </DndContext>
         </div>
 
@@ -193,6 +245,20 @@ export default function BuilderPage() {
         <div className="overflow-auto p-8">
           <Preview components={components} />
         </div>
+
+        <AnimatePresence>
+          {activeConfig && (
+            <ConfigPanel
+              component={activeConfig}
+              onUpdate={handleUpdate}
+              onClose={() => setActiveConfig(null)}
+              onDelete={(id) => {
+                handleDelete(id);
+                setActiveConfig(null);
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
