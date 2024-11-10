@@ -114,12 +114,12 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
       initial={{ x: 300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
-      className="fixed right-0 top-0 h-screen w-96 bg-[#1a1a1a] shadow-2xl"
+      className="fixed right-0 top-0 h-screen w-96 bg-[#111] shadow-2xl z-50 border-l border-[#222]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 h-16 border-b border-[#333]">
+      <div className="flex items-center justify-between px-6 h-16 border-b border-[#222]">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#333] rounded-md">
+          <div className="p-2 bg-[#222] rounded-md">
             <Type className="w-4 h-4" />
           </div>
           <div>
@@ -157,7 +157,7 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[#333] bg-[#1a1a1a]">
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[#222] bg-[#111]">
         <button 
           onClick={() => onDelete(component.id)}
           className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"

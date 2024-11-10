@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, GripVertical, Trash2 } from 'lucide-react';
 import type { Component } from '@/app/builder/page';
 
@@ -35,14 +35,22 @@ export function DraggableComponent({
   return (
     <motion.div
       ref={setNodeRef}
+      layout="position"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ 
+        opacity: 0, 
+        scale: 0.95,
+        transition: { duration: 0.15, ease: 'easeOut' }
+      }}
       style={{
         transform: CSS.Transform.toString(transform),
-        transition,
+        transition: transition || undefined,
       }}
       className={`
         group relative bg-component-bg rounded-xl
-        ${isDragging ? 'opacity-50' : 'opacity-100'}
-        ${isDragOverlay ? 'shadow-2xl ring-1 ring-white/10 w-[200px]' : 'hover:ring-1 hover:ring-white/10'}
+        ${isDragging ? 'opacity-50 scale-[0.98] z-10' : 'opacity-100'}
+        ${isDragOverlay ? 'shadow-2xl ring-1 ring-white/10' : 'hover:ring-1 hover:ring-white/10'}
       `}
       {...attributes}
     >
