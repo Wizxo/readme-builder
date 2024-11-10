@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Component } from '@/app/builder/page';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Trash2, Type, ChevronRight } from 'lucide-react';
 import { componentConfigs } from '@/lib/componentConfig';
 
 interface Props {
@@ -114,35 +114,60 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
       initial={{ x: 300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
-      className="fixed right-0 top-0 h-screen w-96 bg-[#1a1a1a] border-l border-[#333] p-6"
+      className="fixed right-0 top-0 h-screen w-96 bg-[#1a1a1a] shadow-2xl"
     >
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Configure {component.type}</h3>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => onDelete(component.id)}
-              className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-md transition-colors"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
-            <button 
-              onClick={onClose} 
-              className="p-2 hover:bg-white/5 rounded-md"
-            >
-              <X className="h-5 w-5" />
-            </button>
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 h-16 border-b border-[#333]">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#333] rounded-md">
+            <Type className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-medium">{component.type}</h3>
+            <p className="text-xs text-gray-500">Configure component</p>
           </div>
         </div>
+        <button 
+          onClick={onClose}
+          className="p-2 hover:bg-white/5 rounded-md text-gray-400 hover:text-gray-300"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        <div className="space-y-6">
-          {configs.map((config) => (
-            <div key={config.name} className="space-y-2">
-              <label className="text-sm text-gray-400">{config.label}</label>
-              {renderConfigInput(config, component, onUpdate)}
-            </div>
-          ))}
+      {/* Content */}
+      <div className="p-6 space-y-6">
+        {/* Content Input */}
+        <div className="space-y-2">
+          <label className="text-sm text-gray-400">Content</label>
+          <textarea
+            value={component.content}
+            onChange={(e) => onUpdate(component.id, { content: e.target.value })}
+            className="w-full h-24 bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-gray-300 resize-none"
+          />
         </div>
+
+        {/* Config Inputs */}
+        {configs.map((config) => (
+          <div key={config.name} className="space-y-2">
+            <label className="text-sm text-gray-400">{config.label}</label>
+            {renderConfigInput(config, component, onUpdate)}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[#333] bg-[#1a1a1a]">
+        <button 
+          onClick={() => onDelete(component.id)}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Trash2 className="w-4 h-4" />
+            Delete Component
+          </span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </motion.div>
   );
