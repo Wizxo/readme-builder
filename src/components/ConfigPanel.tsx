@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Component } from '@/app/builder/page';
 import { X, Trash2, Type, ChevronRight } from 'lucide-react';
-import { componentConfigs } from '@/lib/componentConfig';
+import { componentConfigs } from '@/config/components';
 
 interface Props {
   component: Component;

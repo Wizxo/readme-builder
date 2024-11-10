@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Search, Package, ChevronDown } from "lucide-react";
 import { useState, useMemo } from "react";
-import { componentConfigs, type ComponentConfig } from '@/lib/componentConfig';
+import { componentConfigs } from '@/config/components';
 import { useDraggable } from '@dnd-kit/core';
 
 const groupedComponents = Object.values(componentConfigs).reduce((acc, config) => {

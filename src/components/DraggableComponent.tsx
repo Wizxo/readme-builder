@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Settings, GripVertical, Trash2 } from 'lucide-react';
 import type { Component } from '@/app/builder/page';
+import { componentConfigs } from '@/config/components';
 
 interface Props {
   component: Component;
