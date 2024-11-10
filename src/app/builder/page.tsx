@@ -28,7 +28,7 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
     <div
       ref={setNodeRef}
       className={`
-        relative min-h-full overflow-auto p-6
+        h-full overflow-auto p-6
         ${isOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
       `}
     >
@@ -251,6 +251,14 @@ export default function BuilderPage() {
     })
   );
 
+  const handleConfigUpdate = useCallback((id: string, updates: Partial<Component>) => {
+    setComponents(components.map(component => 
+      component.id === id 
+        ? { ...component, ...updates } 
+        : component
+    ));
+  }, [components]);
+
   return (
     <DndContext 
       sensors={sensors}
@@ -261,7 +269,7 @@ export default function BuilderPage() {
     >
       <div className="flex h-screen">
         <Sidebar />
-        <main className="flex-1">
+        <main className="flex-1 flex flex-col h-screen">
           {/* Header */}
           <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
             <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
@@ -304,7 +312,7 @@ export default function BuilderPage() {
           </header>
 
           {/* Main Content */}
-          <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
+          <div className="flex-1 grid grid-cols-[1fr,1px,1fr] h-[calc(100vh-3.5rem)]">
             <DroppableArea>
               {components.map((component) => (
                 <DraggableComponent 
@@ -319,12 +327,23 @@ export default function BuilderPage() {
 
             <div className="bg-[#222] w-px h-full" />
             
-            <div className="overflow-auto">
+            <div className="h-full overflow-auto">
               <Preview components={components} />
             </div>
           </div>
         </main>
       </div>
+
+      <AnimatePresence>
+        {activeConfig && (
+          <ConfigPanel
+            component={activeConfig}
+            onUpdate={handleConfigUpdate}
+            onClose={() => setActiveConfig(null)}
+            onDelete={handleDelete}
+          />
+        )}
+      </AnimatePresence>
 
       {typeof document !== 'undefined' && createPortal(
         <DragOverlay>

@@ -45,7 +45,7 @@ export function DraggableComponent({
       ref={setNodeRef}
       style={style}
       className={`
-        group relative bg-[var(--component-bg)] rounded-xl
+        group relative bg-[var(--component-bg)] rounded-xl cursor-default
         ${isDragging ? 'opacity-50' : ''}
         ${isDragOverlay ? 'shadow-lg' : ''}
       `}
