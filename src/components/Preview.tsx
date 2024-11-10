@@ -34,14 +34,81 @@ export function Preview({ components }: PreviewProps) {
     [components]
   );
 
+  const remarkPlugins = useMemo(() => [
+    remarkGfm,
+    remarkMath,
+    remarkBreaks,
+    remarkEmoji,
+    [remarkToc, { heading: 'contents', tight: true }],
+    [remarkGithub, { repository: 'yourusername/readme-builder' }]
+  ], []);
+
+  const rehypePlugins = useMemo(() => [
+    rehypeRaw,
+    rehypeSlug,
+    rehypeKatex,
+    [rehypeAutolinkHeadings, {
+      behavior: 'wrap',
+      properties: {
+        className: ['anchor']
+      }
+    }]
+  ], []);
+
+  const markdownComponents = useMemo(() => ({
+    code({node, inline, className, children, ...props}) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <SyntaxHighlighter
+          {...props}
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+          showLineNumbers
+          customStyle={{ margin: 0 }}
+        >
+          {String(children).replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      ) : (
+        <code 
+          className={`${className} bg-[#1a1a1a] px-1.5 py-0.5 rounded text-sm text-white/90 font-mono`}
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    },
+    h1: ({node, ...props}) => <h1 className="text-3xl font-bold mb-4" {...props} />,
+    h2: ({node, ...props}) => <h2 className="text-2xl font-bold mb-3" {...props} />,
+    h3: ({node, ...props}) => <h3 className="text-xl font-bold mb-2" {...props} />,
+    p: ({node, ...props}) => <p className="mb-4" {...props} />,
+    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4" {...props} />,
+    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4" {...props} />,
+    li: ({node, ...props}) => <li className="mb-1" {...props} />,
+    a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
+    blockquote: ({node, ...props}) => (
+      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />
+    ),
+    table: ({node, ...props}) => (
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full divide-y divide-gray-700" {...props} />
+      </div>
+    ),
+    th: ({node, ...props}) => <th className="px-4 py-2 bg-gray-800" {...props} />,
+    td: ({node, ...props}) => <td className="px-4 py-2 border-t border-gray-700" {...props} />
+  }), []);
+
   const handleCopy = useCallback(async () => {
+    if (!markdown) return;
+    
     try {
       await navigator.clipboard.writeText(markdown);
       setCopied(true);
       toast.success('Copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      toast.error('Failed to copy');
+      toast.error('Failed to copy: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setTimeout(() => setCopied(false), 2000);
     }
   }, [markdown]);
 
@@ -105,68 +172,12 @@ export function Preview({ components }: PreviewProps) {
             {activeTab === 'preview' ? (
               <div className="prose prose-invert max-w-none prose-pre:bg-[#1E1E1E] prose-pre:p-4 rounded-lg bg-white/[0.02] p-8">
                 <ReactMarkdown
-                  children={markdown}
-                  remarkPlugins={[
-                    remarkGfm,
-                    remarkMath,
-                    remarkBreaks,
-                    remarkEmoji,
-                    [remarkToc, { heading: 'contents', tight: true }],
-                    [remarkGithub, { repository: 'yourusername/readme-builder' }]
-                  ]}
-                  rehypePlugins={[
-                    rehypeRaw,
-                    rehypeSlug,
-                    rehypeKatex,
-                    [rehypeAutolinkHeadings, {
-                      behavior: 'wrap',
-                      properties: {
-                        className: ['anchor']
-                      }
-                    }]
-                  ]}
-                  components={{
-                    code({node, inline, className, children, ...props}) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      return !inline && match ? (
-                        <SyntaxHighlighter
-                          {...props}
-                          style={vscDarkPlus}
-                          language={match[1]}
-                          PreTag="div"
-                          showLineNumbers
-                        >
-                          {String(children).replace(/\n$/, '')}
-                        </SyntaxHighlighter>
-                      ) : (
-                        <code 
-                          className={className + " bg-[#1a1a1a] px-1.5 py-0.5 rounded text-sm text-white/90 font-mono"} 
-                          {...props}
-                        >
-                          {children}
-                        </code>
-                      );
-                    },
-                    h1: ({node, ...props}) => <h1 className="text-3xl font-bold mb-4" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="text-2xl font-bold mb-3" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="text-xl font-bold mb-2" {...props} />,
-                    p: ({node, ...props}) => <p className="mb-4" {...props} />,
-                    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4" {...props} />,
-                    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4" {...props} />,
-                    li: ({node, ...props}) => <li className="mb-1" {...props} />,
-                    a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
-                    blockquote: ({node, ...props}) => (
-                      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />
-                    ),
-                    table: ({node, ...props}) => (
-                      <div className="overflow-x-auto my-4">
-                        <table className="min-w-full divide-y divide-gray-700" {...props} />
-                      </div>
-                    ),
-                    th: ({node, ...props}) => <th className="px-4 py-2 bg-gray-800" {...props} />,
-                    td: ({node, ...props}) => <td className="px-4 py-2 border-t border-gray-700" {...props} />
-                  }}
-                />
+                  remarkPlugins={remarkPlugins}
+                  rehypePlugins={rehypePlugins}
+                  components={markdownComponents}
+                >
+                  {markdown}
+                </ReactMarkdown>
               </div>
             ) : (
               <pre className="rounded-lg bg-white/[0.02] p-8 overflow-auto">
