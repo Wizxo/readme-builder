@@ -5,9 +5,13 @@
 :root {
   --background: #111111;
   --foreground: #ffffff;
-  --sidebar-bg: #111111;
   --component-bg: #222222;
   --border-color: #333333;
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --hover-border: #444444;
+  --text-primary: #ffffff;
+  --text-secondary: #999999;
+  --text-tertiary: #666666;
 }
 
 body {

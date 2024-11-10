@@ -188,9 +188,9 @@ export default function BuilderPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-[var(--background)]">
       {/* Header */}
-      <header className="border-b border-[#222] bg-[#111] z-10">
+      <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
         <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-base font-medium">
@@ -236,7 +236,7 @@ export default function BuilderPage() {
         <div 
           className={`
             overflow-auto p-6 transition-colors
-            ${isDraggingOver ? 'bg-[#111]' : ''}
+            ${isDraggingOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
           `}
           onDrop={handleDrop}
           onDragOver={handleDragOver}

@@ -20,7 +20,7 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
     switch (config.type) {
       case 'segmented':
         return (
-          <div className="flex gap-1 bg-[#222] p-1 rounded-lg">
+          <div className="flex gap-1 bg-[var(--component-bg)] p-1 rounded-lg">
             {config.options.map((option: string) => (
               <button
                 key={option}
@@ -29,8 +29,8 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
                 })}
                 className={`flex-1 px-3 py-1.5 text-sm rounded-md transition-colors ${
                   component.config?.[config.name] === option 
-                    ? 'bg-[#333] text-white' 
-                    : 'text-gray-400 hover:text-gray-300'
+                    ? 'bg-[var(--border-color)] text-[var(--text-primary)]' 
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 {option}
@@ -70,7 +70,7 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
             onChange={(e) => onUpdate(component.id, {
               config: { ...component.config, [config.name]: e.target.value }
             })}
-            className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-gray-300"
+            className="w-full bg-[var(--component-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--hover-border)]"
           >
             {config.options.map((option: { value: string; label: string }) => (
               <option key={option.value} value={option.value}>
@@ -88,7 +88,7 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
             onChange={(e) => onUpdate(component.id, {
               config: { ...component.config, [config.name]: e.target.value }
             })}
-            className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-gray-300"
+            className="w-full bg-[var(--component-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--hover-border)]"
           />
         );
 
@@ -100,7 +100,7 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
             onChange={(e) => onUpdate(component.id, {
               config: { ...component.config, [config.name]: e.target.value }
             })}
-            className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-gray-300"
+            className="w-full bg-[var(--component-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--hover-border)]"
           />
         );
 
