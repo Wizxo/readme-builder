@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --background: #000000;
+  --background: #111111;
   --foreground: #ffffff;
   --sidebar-bg: #111111;
-  --component-bg: #1a1a1a;
+  --component-bg: #222222;
+  --border-color: #333333;
 }
 
 body {
@@ -86,8 +87,8 @@ body {
   pointer-events: none;
   position: fixed;
   z-index: 100;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: #222222;
+  border: 1px solid #333333;
   border-radius: 8px;
   padding: 8px 16px;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);

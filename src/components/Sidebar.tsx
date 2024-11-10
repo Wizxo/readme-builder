@@ -39,7 +39,7 @@ export function Sidebar() {
   }, {} as Record<string, ComponentConfig[]>);
 
   return (
-    <aside className="w-80 h-screen flex flex-col bg-[#111] border-r border-[#222]">
+    <aside className="w-80 h-screen flex flex-col bg-[#111] border-r border-[#333]">
       <div className="p-5 space-y-6">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[#222] flex items-center justify-center">

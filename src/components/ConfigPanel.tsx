@@ -110,65 +110,74 @@ export function ConfigPanel({ component, onUpdate, onClose, onDelete }: Props) {
   }
 
   return (
-    <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
-      className="fixed right-0 top-0 h-screen w-96 bg-[#111] shadow-2xl z-50 border-l border-[#222]"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 h-16 border-b border-[#222]">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#222] rounded-md">
-            <Type className="w-4 h-4" />
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.3 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black z-40"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ x: 300, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 300, opacity: 0 }}
+        className="fixed right-0 top-0 h-screen w-96 bg-[#111] shadow-2xl z-50 border-l border-[#333]"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 h-16 border-b border-[#333]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#222] rounded-md">
+              <Type className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-medium">{component.type}</h3>
+              <p className="text-xs text-gray-500">Configure component</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-medium">{component.type}</h3>
-            <p className="text-xs text-gray-500">Configure component</p>
-          </div>
-        </div>
-        <button 
-          onClick={onClose}
-          className="p-2 hover:bg-white/5 rounded-md text-gray-400 hover:text-gray-300"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="p-6 space-y-6">
-        {/* Content Input */}
-        <div className="space-y-2">
-          <label className="text-sm text-gray-400">Content</label>
-          <textarea
-            value={component.content}
-            onChange={(e) => onUpdate(component.id, { content: e.target.value })}
-            className="w-full h-24 bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-gray-300 resize-none"
-          />
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-white/5 rounded-md text-gray-400 hover:text-gray-300"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Config Inputs */}
-        {configs.map((config) => (
-          <div key={config.name} className="space-y-2">
-            <label className="text-sm text-gray-400">{config.label}</label>
-            {renderConfigInput(config, component, onUpdate)}
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Content Input */}
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">Content</label>
+            <textarea
+              value={component.content}
+              onChange={(e) => onUpdate(component.id, { content: e.target.value })}
+              className="w-full h-24 bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-gray-300 resize-none focus:border-[#444]"
+            />
           </div>
-        ))}
-      </div>
 
-      {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[#222] bg-[#111]">
-        <button 
-          onClick={() => onDelete(component.id)}
-          className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-        >
-          <span className="flex items-center gap-2">
-            <Trash2 className="w-4 h-4" />
-            Delete Component
-          </span>
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-    </motion.div>
+          {/* Config Inputs */}
+          {configs.map((config) => (
+            <div key={config.name} className="space-y-2">
+              <label className="text-sm text-gray-400">{config.label}</label>
+              {renderConfigInput(config, component, onUpdate)}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[#333] bg-[#111]">
+          <button 
+            onClick={() => onDelete(component.id)}
+            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Trash2 className="w-4 h-4" />
+              Delete Component
+            </span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.div>
+    </>
   );
 } 
