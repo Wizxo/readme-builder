@@ -1,7 +1,6 @@
 'use client';
 
-import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor, DragOverEvent, DragOverlay } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor, DragOverEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DraggableComponent } from '@/components/DraggableComponent';
@@ -11,12 +10,33 @@ import { nanoid } from 'nanoid';
 import { Plus, Save, Download, Undo, Command, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfigPanel } from '@/components/ConfigPanel';
+import { createPortal } from 'react-dom';
 
 export interface Component {
   id: string;
   type: string;
   content: string;
   config?: Record<string, any>;
+}
+
+function DroppableArea({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'drop-container',
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        relative min-h-full overflow-auto p-6
+        ${isOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
+      `}
+    >
+      <div className="space-y-3 max-w-2xl mx-auto">
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export default function BuilderPage() {
@@ -54,22 +74,49 @@ export default function BuilderPage() {
   }, [history]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    console.log('DragStart:', {
+      active: event.active,
+      id: event.active.id,
+      rect: event.active.rect,
+      data: event.active.data?.current,
+    });
     const { active } = event;
     setActiveId(active.id as string);
     setIsDraggingNew(active.data?.current?.type === 'new');
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
+    console.log('DragOver:', {
+      active: {
+        id: event.active.id,
+        data: event.active.data?.current,
+        rect: event.active.rect
+      },
+      over: event.over ? {
+        id: event.over.id,
+        data: event.over.data?.current,
+        rect: event.over.rect
+      } : null
+    });
     setIsDraggingOver(!!event.over);
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    console.log('DragEnd:', {
+      active: event.active,
+      over: event.over,
+      activeData: event.active.data?.current,
+    });
+    
     const { active, over } = event;
     setActiveId(null);
     setIsDraggingOver(false);
     setIsDraggingNew(false);
     
-    if (!over) return;
+    if (!over) {
+      console.log('No drop target found');
+      return;
+    }
 
     // Handle new component drops
     if (active.data?.current?.type === 'new') {
@@ -79,25 +126,35 @@ export default function BuilderPage() {
         type: componentType,
         content: `New ${componentType}`,
       };
-      setComponents(prev => [...prev, newComponent]);
+      
+      if (over.id === 'drop-container') {
+        // Add to the end
+        setComponents(prev => [...prev, newComponent]);
+      } else {
+        // Insert at specific position
+        const overIndex = components.findIndex((item) => item.id === over.id);
+        const newComponents = [...components];
+        newComponents.splice(overIndex, 0, newComponent);
+        setComponents(newComponents);
+      }
+      
       toast.success(`Added ${componentType} component`);
       return;
     }
 
-    // Handle reordering
+    // Handle reordering existing components
     if (active.id !== over.id) {
-      setComponents(prev => {
-        const oldIndex = prev.findIndex((item) => item.id === active.id);
-        const newIndex = prev.findIndex((item) => item.id === over.id);
-        
-        const newComponents = [...prev];
+      const oldIndex = components.findIndex((item) => item.id === active.id);
+      const newIndex = components.findIndex((item) => item.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newComponents = [...components];
         const [removed] = newComponents.splice(oldIndex, 1);
         newComponents.splice(newIndex, 0, removed);
-        
-        return newComponents;
-      });
+        setComponents(newComponents);
+      }
     }
-  }, []);
+  }, [components]);
 
   function handleSave() {
     try {
@@ -189,7 +246,7 @@ export default function BuilderPage() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 8,
       },
     })
   );
@@ -204,134 +261,88 @@ export default function BuilderPage() {
     >
       <div className="flex h-screen">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
-          <div className="h-screen flex flex-col bg-[var(--background)]">
-            {/* Header */}
-            <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
-              <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-base font-medium">
-                    README Builder
-                  </span>
-                  <div className="h-3 w-px bg-[#333]" />
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Command className="w-3.5 h-3.5" />
-                    <span>Editor</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={handleUndo}
-                    disabled={history.length <= 1}
-                    className="p-2 rounded-md hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Undo"
-                  >
-                    <Undo className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="p-2 rounded-md hover:bg-[#222]"
-                    title="Save"
-                  >
-                    <Save className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleDownload}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white text-black rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Export
-                  </button>
+        <main className="flex-1">
+          {/* Header */}
+          <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
+            <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-base font-medium">
+                  README Builder
+                </span>
+                <div className="h-3 w-px bg-[#333]" />
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Command className="w-3.5 h-3.5" />
+                  <span>Editor</span>
                 </div>
               </div>
-            </header>
-
-            {/* Main Content */}
-            <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
-              {/* Builder Panel */}
-              <div 
-                className={`
-                  overflow-auto p-6 transition-colors
-                  ${isDraggingOver && isDraggingNew ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
-                `}
-              >
-                <SortableContext items={components} strategy={verticalListSortingStrategy}>
-                  <motion.div layout className="space-y-3 max-w-2xl mx-auto">
-                    <AnimatePresence mode="popLayout">
-                      {components.length === 0 ? (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="border border-[#222] rounded-lg p-8 text-center bg-[#111]"
-                        >
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="p-3 rounded-full bg-[#191919]">
-                              <Plus className="w-6 h-6 text-gray-400" />
-                            </div>
-                            <div>
-                              <p className="text-base font-medium text-gray-200 mb-1">
-                                Start Building Your README
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Drag components from the sidebar to get started
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        components.map((component) => (
-                          <DraggableComponent 
-                            key={component.id} 
-                            component={component}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                            onOpenConfig={setActiveConfig}
-                          />
-                        ))
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                </SortableContext>
-              </div>
-
-              <div className="bg-[#222] w-px h-full" />
               
-              <div className="overflow-auto">
-                <Preview components={components} />
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleUndo}
+                  disabled={history.length <= 1}
+                  className="p-2 rounded-md hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Undo"
+                >
+                  <Undo className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="p-2 rounded-md hover:bg-[#222]"
+                  title="Save"
+                >
+                  <Save className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white text-black rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export
+                </button>
               </div>
+            </div>
+          </header>
 
-              <AnimatePresence>
-                {activeConfig && (
-                  <ConfigPanel
-                    component={activeConfig}
-                    onUpdate={handleUpdate}
-                    onClose={() => setActiveConfig(null)}
-                    onDelete={(id) => {
-                      handleDelete(id);
-                      setActiveConfig(null);
-                    }}
-                  />
-                )}
-              </AnimatePresence>
+          {/* Main Content */}
+          <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
+            <DroppableArea>
+              {components.map((component) => (
+                <DraggableComponent 
+                  key={component.id} 
+                  component={component}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onOpenConfig={setActiveConfig}
+                />
+              ))}
+            </DroppableArea>
+
+            <div className="bg-[#222] w-px h-full" />
+            
+            <div className="overflow-auto">
+              <Preview components={components} />
             </div>
           </div>
         </main>
       </div>
-      <DragOverlay>
-        {activeId && (
-          <DraggableComponent 
-            component={
-              components.find(c => c.id === activeId) || {
-                id: 'new',
-                type: activeId.replace('new-', ''),
-                content: ''
+
+      {typeof document !== 'undefined' && createPortal(
+        <DragOverlay>
+          {activeId && (
+            <DraggableComponent 
+              component={
+                components.find(c => c.id === activeId) || {
+                  id: 'new',
+                  type: activeId.replace('new-', ''),
+                  content: ''
+                }
               }
-            }
-            isDragOverlay
-          />
-        )}
-      </DragOverlay>
+              isDragOverlay
+            />
+          )}
+        </DragOverlay>,
+        document.body
+      )}
     </DndContext>
   );
 }

@@ -25,10 +25,14 @@ export function DraggableComponent({
     setNodeRef,
     transform,
     transition,
-    isDragging
+    isDragging,
   } = useSortable({ 
-    id: component.id,
-    disabled: isDragOverlay 
+    id: component.id.toString(),
+    disabled: isDragOverlay,
+    data: {
+      type: 'component',
+      component
+    }
   });
 
   const style = {
