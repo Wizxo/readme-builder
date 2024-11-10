@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Search, Package, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { componentConfigs, type ComponentConfig } from '@/lib/componentConfig';
 import { useDraggable } from '@dnd-kit/core';
 
@@ -17,14 +17,17 @@ export function Sidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  const filteredComponents = Object.entries(groupedComponents).reduce((acc, [category, components]) => {
-    const filtered = components.filter(component => 
-      component.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      component.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    if (filtered.length > 0) acc[category] = filtered;
-    return acc;
-  }, {} as Record<string, ComponentConfig[]>);
+  const filteredComponents = useMemo(() => 
+    Object.entries(groupedComponents).reduce((acc, [category, components]) => {
+      const filtered = components.filter(component => 
+        component.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        component.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      if (filtered.length > 0) acc[category] = filtered;
+      return acc;
+    }, {} as Record<string, ComponentConfig[]>),
+    [searchQuery]
+  );
 
   return (
     <aside className="w-80 h-screen flex flex-col bg-[var(--background)] border-r border-[var(--border-color)]">

@@ -7,9 +7,9 @@ import type { Component } from '@/app/builder/page';
 
 interface Props {
   component: Component;
-  onUpdate?: (id: string, updates: Partial<Component>) => void;
   onOpenConfig?: (component: Component) => void;
   onDelete?: (id: string) => void;
+  onUpdate?: (id: string, updates: Partial<Component>) => void;
   isDragOverlay?: boolean;
 }
 
@@ -17,6 +17,7 @@ export function DraggableComponent({
   component, 
   onOpenConfig,
   onDelete,
+  onUpdate,
   isDragOverlay 
 }: Props) {
   const {
@@ -70,6 +71,7 @@ export function DraggableComponent({
           <button 
             onClick={() => onOpenConfig?.(component)}
             className="h-full px-4 hover:bg-white/5 text-gray-500"
+            aria-label="Configure component"
           >
             <Settings className="w-4 h-4" />
           </button>

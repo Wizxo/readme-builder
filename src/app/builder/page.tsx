@@ -1,6 +1,6 @@
 'use client';
 
-import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor, DragOverEvent, DragOverlay, useDroppable, pointerWithin } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, DragOverEvent, DragOverlay, useDroppable, pointerWithin } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -85,40 +85,16 @@ export default function BuilderPage() {
   }, [history]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    console.log('DragStart:', {
-      active: event.active,
-      id: event.active.id,
-      rect: event.active.rect,
-      data: event.active.data?.current,
-    });
     const { active } = event;
     setActiveId(active.id as string);
     setIsDraggingNew(active.data?.current?.type === 'new');
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
-    console.log('DragOver:', {
-      active: {
-        id: event.active.id,
-        data: event.active.data?.current,
-        rect: event.active.rect
-      },
-      over: event.over ? {
-        id: event.over.id,
-        data: event.over.data?.current,
-        rect: event.over.rect
-      } : null
-    });
     setIsDraggingOver(!!event.over);
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    console.log('DragEnd:', {
-      active: event.active,
-      over: event.over,
-      activeData: event.active.data?.current,
-    });
-    
     const { active, over } = event;
     setActiveId(null);
     setIsDraggingOver(false);
@@ -169,9 +145,14 @@ export default function BuilderPage() {
 
   function handleSave() {
     try {
+      if (!components.length) {
+        toast.error('No components to save');
+        return;
+      }
       localStorage.setItem('readme-components', JSON.stringify(components));
       toast.success('Progress saved successfully');
     } catch (error) {
+      console.error('Save error:', error);
       toast.error('Failed to save progress');
     }
   }
@@ -236,10 +217,11 @@ export default function BuilderPage() {
 
   function handleDelete(id: string) {
     setComponents(components.filter(component => component.id !== id));
+    setActiveConfig(null);
     toast.success('Component deleted');
   }
 
-  function handleUpdate(id: string, updates: Partial<Component>) {
+  const handleUpdate = useCallback((id: string, updates: Partial<Component>) => {
     setComponents(components.map(component => 
       component.id === id 
         ? { 
@@ -252,7 +234,7 @@ export default function BuilderPage() {
           }
         : component
     ));
-  }
+  }, [components]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -261,14 +243,6 @@ export default function BuilderPage() {
       },
     })
   );
-
-  const handleConfigUpdate = useCallback((id: string, updates: Partial<Component>) => {
-    setComponents(components.map(component => 
-      component.id === id 
-        ? { ...component, ...updates } 
-        : component
-    ));
-  }, [components]);
 
   return (
     <DndContext 
@@ -349,7 +323,7 @@ export default function BuilderPage() {
         {activeConfig && (
           <ConfigPanel
             component={activeConfig}
-            onUpdate={handleConfigUpdate}
+            onUpdate={handleUpdate}
             onClose={() => setActiveConfig(null)}
             onDelete={handleDelete}
           />
