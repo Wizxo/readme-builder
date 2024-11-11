@@ -3,15 +3,45 @@
 import { useState, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import remarkGithub from 'remark-github';
+import rehypeRaw from 'rehype-raw';
+import rehypeSlug from 'rehype-slug';
+import rehypeAutolinkHeadings from 'rehype-autolink-headings';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import 'katex/dist/katex.min.css';
+import remarkBreaks from 'remark-breaks';
+import remarkEmoji from 'remark-emoji';
+import remarkToc from 'remark-toc';
+import rehypeKatex from 'rehype-katex';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Code, Copy, Check } from 'lucide-react';
 import type { Component } from '@/app/builder/page';
 import { generateMarkdown } from '@/lib/componentConfig';
 import { toast } from 'sonner';
+import type { Options } from 'react-markdown';
+import type { Components as MarkdownComponents } from 'react-markdown';
+import type { DetailedHTMLProps, HTMLAttributes, LiHTMLAttributes, AnchorHTMLAttributes, TableHTMLAttributes, TdHTMLAttributes, ThHTMLAttributes, BlockquoteHTMLAttributes } from 'react';
 
 interface PreviewProps {
   components: Component[];
 }
+
+// Add type for HTML props
+type HTMLProps = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement>;
+
+// Add specific HTML element types
+type HeadingProps = DetailedHTMLProps<HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
+type ParagraphProps = DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>;
+type ULProps = DetailedHTMLProps<HTMLAttributes<HTMLUListElement>, HTMLUListElement>;
+type OLProps = DetailedHTMLProps<HTMLAttributes<HTMLOListElement>, HTMLOListElement>;
+type LIProps = DetailedHTMLProps<LiHTMLAttributes<HTMLLIElement>, HTMLLIElement>;
+type AnchorProps = DetailedHTMLProps<AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>;
+type BlockquoteProps = DetailedHTMLProps<BlockquoteHTMLAttributes<HTMLQuoteElement>, HTMLQuoteElement>;
+type TableProps = DetailedHTMLProps<TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>;
+type THProps = DetailedHTMLProps<ThHTMLAttributes<HTMLTableHeaderCellElement>, HTMLTableHeaderCellElement>;
+type TDProps = DetailedHTMLProps<TdHTMLAttributes<HTMLTableDataCellElement>, HTMLTableDataCellElement>;
 
 export function Preview({ components }: PreviewProps) {
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
@@ -22,14 +52,81 @@ export function Preview({ components }: PreviewProps) {
     [components]
   );
 
+  const remarkPlugins = useMemo(() => [
+    remarkGfm,
+    remarkMath,
+    remarkBreaks,
+    remarkEmoji,
+    [remarkToc, { heading: 'contents', tight: true }],
+    [remarkGithub, { repository: 'yourusername/readme-builder' }]
+  ] as Options['remarkPlugins'], []);
+
+  const rehypePlugins = useMemo(() => [
+    rehypeRaw,
+    rehypeSlug,
+    rehypeKatex,
+    [rehypeAutolinkHeadings, {
+      behavior: 'wrap',
+      properties: {
+        className: ['anchor']
+      }
+    }]
+  ] as Options['rehypePlugins'], []);
+
+  const markdownComponents: Partial<MarkdownComponents> = useMemo(() => ({
+    code({inline, className, children, ...props}: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <SyntaxHighlighter
+          {...props}
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+          showLineNumbers
+          customStyle={{ margin: 0 }}
+        >
+          {String(children).replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      ) : (
+        <code 
+          className={`${className} bg-[#1a1a1a] px-1.5 py-0.5 rounded text-sm text-white/90 font-mono`}
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    },
+    h1: (props: HeadingProps) => <h1 className="text-3xl font-bold mb-4" {...props} />,
+    h2: (props: HeadingProps) => <h2 className="text-2xl font-bold mb-3" {...props} />,
+    h3: (props: HeadingProps) => <h3 className="text-xl font-bold mb-2" {...props} />,
+    p: (props: ParagraphProps) => <p className="mb-4" {...props} />,
+    ul: (props: ULProps) => <ul className="list-disc list-inside mb-4" {...props} />,
+    ol: (props: OLProps) => <ol className="list-decimal list-inside mb-4" {...props} />,
+    li: (props: LIProps) => <li className="mb-1" {...props} />,
+    a: (props: AnchorProps) => <a className="text-blue-400 hover:underline" {...props} />,
+    blockquote: (props: BlockquoteProps) => (
+      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />
+    ),
+    table: (props: TableProps) => (
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full divide-y divide-gray-700" {...props} />
+      </div>
+    ),
+    th: (props: THProps) => <th className="px-4 py-2 bg-gray-800" {...props} />,
+    td: (props: TDProps) => <td className="px-4 py-2 border-t border-gray-700" {...props} />
+  }), []);
+
   const handleCopy = useCallback(async () => {
+    if (!markdown) return;
+    
     try {
       await navigator.clipboard.writeText(markdown);
       setCopied(true);
       toast.success('Copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      toast.error('Failed to copy');
+      toast.error('Failed to copy: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setTimeout(() => setCopied(false), 2000);
     }
   }, [markdown]);
 
@@ -91,8 +188,12 @@ export function Preview({ components }: PreviewProps) {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'preview' ? (
-              <div className="prose prose-invert prose-p:text-white/70 prose-headings:text-white/90 prose-strong:text-white/90 prose-code:text-white/90 max-w-none rounded-lg bg-white/[0.02] p-8">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <div className="prose prose-invert max-w-none prose-pre:bg-[#1E1E1E] prose-pre:p-4 rounded-lg bg-white/[0.02] p-8">
+                <ReactMarkdown
+                  remarkPlugins={remarkPlugins}
+                  rehypePlugins={rehypePlugins}
+                  components={markdownComponents}
+                >
                   {markdown}
                 </ReactMarkdown>
               </div>

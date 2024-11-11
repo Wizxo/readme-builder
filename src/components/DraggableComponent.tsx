@@ -2,15 +2,15 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, GripVertical, Trash2 } from 'lucide-react';
 import type { Component } from '@/app/builder/page';
+import { componentConfigs } from '@/config/components';
 
 interface Props {
   component: Component;
-  onUpdate?: (id: string, updates: Partial<Component>) => void;
   onOpenConfig?: (component: Component) => void;
   onDelete?: (id: string) => void;
+  onUpdate?: (id: string, updates: Partial<Component>) => void;
   isDragOverlay?: boolean;
 }
 
@@ -18,6 +18,7 @@ export function DraggableComponent({
   component, 
   onOpenConfig,
   onDelete,
+  onUpdate,
   isDragOverlay 
 }: Props) {
   const {
@@ -26,31 +27,29 @@ export function DraggableComponent({
     setNodeRef,
     transform,
     transition,
-    isDragging
+    isDragging,
   } = useSortable({ 
-    id: component.id,
-    disabled: isDragOverlay 
+    id: component.id.toString(),
+    disabled: isDragOverlay,
+    data: {
+      type: 'component',
+      component
+    }
   });
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <motion.div
+    <div
       ref={setNodeRef}
-      layout="position"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ 
-        opacity: 0, 
-        scale: 0.95,
-        transition: { duration: 0.15, ease: 'easeOut' }
-      }}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition || undefined,
-      }}
+      style={style}
       className={`
-        group relative bg-component-bg rounded-xl
-        ${isDragging ? 'opacity-50 scale-[0.98] z-10' : 'opacity-100'}
-        ${isDragOverlay ? 'shadow-2xl ring-1 ring-white/10' : 'hover:ring-1 hover:ring-white/10'}
+        group relative bg-[var(--component-bg)] rounded-xl cursor-default
+        ${isDragging ? 'opacity-50' : ''}
+        ${isDragOverlay ? 'shadow-lg' : ''}
       `}
       {...attributes}
     >
@@ -73,6 +72,7 @@ export function DraggableComponent({
           <button 
             onClick={() => onOpenConfig?.(component)}
             className="h-full px-4 hover:bg-white/5 text-gray-500"
+            aria-label="Configure component"
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -84,7 +84,7 @@ export function DraggableComponent({
           </button>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 

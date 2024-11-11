@@ -1,17 +1,17 @@
 'use client';
 
-import { DndContext, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, closestCenter, useSensor, useSensors, PointerSensor, DragOverEvent, DragOverlay, useDroppable, pointerWithin } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DraggableComponent } from '@/components/DraggableComponent';
-import { DragOverlay } from '@/components/DragOverlay';
 import { Preview } from '@/components/Preview';
 import { Sidebar } from "@/components/Sidebar";
 import { nanoid } from 'nanoid';
 import { Plus, Save, Download, Undo, Command, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfigPanel } from '@/components/ConfigPanel';
+import { createPortal } from 'react-dom';
 
 export interface Component {
   id: string;
@@ -20,12 +20,44 @@ export interface Component {
   config?: Record<string, any>;
 }
 
+interface DroppableAreaProps {
+  children: React.ReactNode;
+  components: Component[];
+  isDraggingNew: boolean;
+}
+
+function DroppableArea({ children, components, isDraggingNew }: DroppableAreaProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'drop-container',
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        h-full overflow-auto p-6
+        ${isOver && isDraggingNew ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
+      `}
+    >
+      <SortableContext 
+        items={components.map(c => c.id)} 
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-3 max-w-2xl mx-auto">
+          {children}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
 export default function BuilderPage() {
   const [components, setComponents] = useState<Component[]>([]);
   const [history, setHistory] = useState<Component[][]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeConfig, setActiveConfig] = useState<Component | null>(null);
+  const [isDraggingNew, setIsDraggingNew] = useState(false);
 
   // Load saved components on mount
   useEffect(() => {
@@ -54,48 +86,74 @@ export default function BuilderPage() {
   }, [history]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const { active } = event;
+    setActiveId(active.id as string);
+    setIsDraggingNew(active.data?.current?.type === 'new');
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    setIsDraggingOver(!!event.over);
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveId(null);
     const { active, over } = event;
+    setActiveId(null);
+    setIsDraggingOver(false);
+    setIsDraggingNew(false);
     
-    if (over && active.id !== over.id) {
-      setComponents(prev => {
-        const oldIndex = prev.findIndex((item) => item.id === active.id);
-        const newIndex = prev.findIndex((item) => item.id === over.id);
-        
-        const newComponents = [...prev];
+    if (!over) {
+      console.log('No drop target found');
+      return;
+    }
+
+    // Handle new component drops
+    if (active.data?.current?.type === 'new') {
+      const componentType = active.data.current.component.type;
+      const newComponent: Component = {
+        id: nanoid(),
+        type: componentType,
+        content: `New ${componentType}`,
+      };
+      
+      if (over.id === 'drop-container') {
+        // Add to the end
+        setComponents(prev => [...prev, newComponent]);
+      } else {
+        // Insert at specific position
+        const overIndex = components.findIndex((item) => item.id === over.id);
+        const newComponents = [...components];
+        newComponents.splice(overIndex, 0, newComponent);
+        setComponents(newComponents);
+      }
+      
+      toast.success(`Added ${componentType} component`);
+      return;
+    }
+
+    // Handle reordering existing components
+    if (active.id !== over.id) {
+      const oldIndex = components.findIndex((item) => item.id === active.id);
+      const newIndex = components.findIndex((item) => item.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newComponents = [...components];
         const [removed] = newComponents.splice(oldIndex, 1);
         newComponents.splice(newIndex, 0, removed);
-        
-        return newComponents;
-      });
+        setComponents(newComponents);
+      }
     }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-    const componentType = e.dataTransfer.getData('componentType');
-    if (!componentType) return;
-    
-    const newComponent: Component = {
-      id: nanoid(),
-      type: componentType,
-      content: `New ${componentType}`,
-    };
-    
-    setComponents(prev => [...prev, newComponent]);
-    toast.success(`Added ${componentType} component`);
-  }, []);
+  }, [components]);
 
   function handleSave() {
     try {
+      if (!components.length) {
+        toast.error('No components to save');
+        return;
+      }
       localStorage.setItem('readme-components', JSON.stringify(components));
       toast.success('Progress saved successfully');
     } catch (error) {
+      console.error('Save error:', error);
       toast.error('Failed to save progress');
     }
   }
@@ -160,39 +218,50 @@ export default function BuilderPage() {
 
   function handleDelete(id: string) {
     setComponents(components.filter(component => component.id !== id));
+    setActiveConfig(null);
     toast.success('Component deleted');
   }
 
-  function handleUpdate(id: string, updates: Partial<Component>) {
-    setComponents(components.map(component => 
-      component.id === id 
-        ? { 
-            ...component, 
-            ...updates,
-            config: {
-              ...component.config,
-              ...updates.config
-            }
+  const handleUpdate = useCallback((id: string, updates: Partial<Component>) => {
+    setComponents(components.map(component => {
+      if (component.id === id) {
+        const updatedComponent = { 
+          ...component, 
+          ...updates,
+          config: {
+            ...component.config,
+            ...updates.config
           }
-        : component
-    ));
-  }
+        };
+        // Update the active config if this is the component being configured
+        if (activeConfig?.id === id) {
+          setActiveConfig(updatedComponent);
+        }
+        return updatedComponent;
+      }
+      return component;
+    }));
+  }, [components, activeConfig]);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDraggingOver(false);
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="h-screen flex flex-col bg-[var(--background)]">
+    <DndContext 
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      collisionDetection={pointerWithin}
+    >
+      <div className="flex h-screen">
+        <Sidebar />
+        <main className="flex-1 flex flex-col h-screen">
           {/* Header */}
           <header className="border-b border-[var(--border-color)] bg-[var(--background)] z-10">
             <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
@@ -235,94 +304,57 @@ export default function BuilderPage() {
           </header>
 
           {/* Main Content */}
-          <div className="flex-1 grid grid-cols-[1fr,1px,1fr] overflow-hidden">
-            {/* Builder Panel */}
-            <div 
-              className={`
-                overflow-auto p-6 transition-colors
-                ${isDraggingOver ? 'bg-[var(--component-bg)]' : 'bg-[var(--background)]'}
-              `}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <DndContext 
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd} 
-                collisionDetection={closestCenter}
-              >
-                <SortableContext items={components} strategy={verticalListSortingStrategy}>
-                  <motion.div layout className="space-y-3 max-w-2xl mx-auto">
-                    <AnimatePresence mode="popLayout">
-                      {components.length === 0 ? (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="border border-[#222] rounded-lg p-8 text-center bg-[#111]"
-                        >
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="p-3 rounded-full bg-[#191919]">
-                              <Plus className="w-6 h-6 text-gray-400" />
-                            </div>
-                            <div>
-                              <p className="text-base font-medium text-gray-200 mb-1">
-                                Start Building Your README
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Drag components from the sidebar to get started
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        components.map((component) => (
-                          <DraggableComponent 
-                            key={component.id} 
-                            component={component}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                            onOpenConfig={setActiveConfig}
-                          />
-                        ))
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                </SortableContext>
-                
-                <DragOverlay>
-                  {activeId ? (
-                    <DraggableComponent 
-                      component={components.find(c => c.id === activeId)!}
-                      isDragOverlay
-                    />
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            </div>
+          <div className="flex-1 grid grid-cols-[1fr,1px,1fr] h-[calc(100vh-3.5rem)]">
+            <DroppableArea components={components} isDraggingNew={isDraggingNew}>
+              {components.map((component) => (
+                <DraggableComponent 
+                  key={component.id} 
+                  component={component}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onOpenConfig={setActiveConfig}
+                />
+              ))}
+            </DroppableArea>
 
             <div className="bg-[#222] w-px h-full" />
             
-            <div className="overflow-auto">
+            <div className="h-full overflow-auto">
               <Preview components={components} />
             </div>
-
-            <AnimatePresence>
-              {activeConfig && (
-                <ConfigPanel
-                  component={activeConfig}
-                  onUpdate={handleUpdate}
-                  onClose={() => setActiveConfig(null)}
-                  onDelete={(id) => {
-                    handleDelete(id);
-                    setActiveConfig(null);
-                  }}
-                />
-              )}
-            </AnimatePresence>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+
+      <AnimatePresence>
+        {activeConfig && (
+          <ConfigPanel
+            component={activeConfig}
+            onUpdate={handleUpdate}
+            onClose={() => setActiveConfig(null)}
+            onDelete={handleDelete}
+          />
+        )}
+      </AnimatePresence>
+
+      {typeof document !== 'undefined' && createPortal(
+        <DragOverlay>
+          {activeId && (
+            <DraggableComponent 
+              component={
+                components.find(c => c.id === activeId) || {
+                  id: 'new',
+                  type: activeId.replace('new-', ''),
+                  content: ''
+                }
+              }
+              isDragOverlay
+            />
+          )}
+        </DragOverlay>,
+        document.body
+      )}
+    </DndContext>
   );
 }
 
